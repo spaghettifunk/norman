@@ -1,4 +1,3 @@
-// START: begin
 package log
 
 import (
@@ -8,12 +7,18 @@ import (
 	"github.com/tysonmote/gommap"
 )
 
+// TODO: handle ungraceful shutdown
+
 var (
+	// offset
 	offWidth uint64 = 4
+	// position
 	posWidth uint64 = 8
-	entWidth        = offWidth + posWidth
+	// entWidth to jump straight to the position of an entry given its offset
+	entWidth = offWidth + posWidth
 )
 
+// index defines our index file, which comprises a persisted file and a memory-mapped file
 type index struct {
 	file *os.File
 	mmap gommap.MMap

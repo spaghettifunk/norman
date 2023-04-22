@@ -1,0 +1,22 @@
+# Configuration file running the Norman locally
+
+title = "Configuration for the Norman"
+
+[commander]
+address = "127.0.0.1"
+port = 8080
+printroutes = true
+
+[broker]
+address = "127.0.0.1"
+port = 8081
+printroutes = true
+
+[storage]
+address = "127.0.0.1"
+port = 8082
+
+[logger]
+level = "debug"
+nocolor = false
+format = "logfmt"

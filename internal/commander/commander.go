@@ -7,3 +7,4 @@ type Commander struct {
 	// configuration here...
 }
 
+func New()

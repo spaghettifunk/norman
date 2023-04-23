@@ -5,12 +5,10 @@ title = "Configuration for the Norman"
 [commander]
 address = "127.0.0.1"
 port = 8080
-printroutes = true
 
 [broker]
 address = "127.0.0.1"
 port = 8081
-printroutes = true
 
 [storage]
 address = "127.0.0.1"

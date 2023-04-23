@@ -46,7 +46,7 @@ func commanderRun(cmd *cobra.Command, args []string) {
 			log.Fatal().Err(err)
 			return
 		}
-		log.Info().Msg("Server is down. Bye Bye!")
+		log.Info().Msg("Commander Server is down. Bye Bye!")
 		close(done)
 	}()
 

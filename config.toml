@@ -18,5 +18,4 @@ port = 8082
 
 [logger]
 level = "debug"
-nocolor = false
-format = "logfmt"
+pretty = false

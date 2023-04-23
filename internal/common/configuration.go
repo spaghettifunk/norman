@@ -29,9 +29,8 @@ type storage struct {
 }
 
 type logger struct {
-	Level    string `toml:"level"`
-	NoColors bool   `toml:"nocolors"`
-	Format   string `toml:"format"`
+	Level  string `toml:"level"`
+	Pretty bool   `toml:"pretty"`
 }
 
 func Fetch() *Configuration {
@@ -51,11 +50,14 @@ func Fetch() *Configuration {
 			Port:    getIntOrDefault("storage.port", 8082),
 		},
 		Logger: &logger{
-			Level:    getStringOrDefault("level", "debug"),
-			NoColors: getBoolOrDefault("nocolors", false),
-			Format:   getStringOrDefault("format", "json"),
+			Level:  getStringOrDefault("level", "info"),
+			Pretty: getBoolOrDefault("pretty", false),
 		},
 	}
+}
+
+func (c *Configuration) Validate() error {
+	return nil
 }
 
 func getStringOrDefault(key string, defaultValue string) string {

@@ -50,8 +50,8 @@ func Fetch() *Configuration {
 			Port:    getIntOrDefault("storage.port", 8082),
 		},
 		Logger: &logger{
-			Level:  getStringOrDefault("level", "info"),
-			Pretty: getBoolOrDefault("pretty", false),
+			Level:  getStringOrDefault("logger.level", "info"),
+			Pretty: getBoolOrDefault("logger.pretty", false),
 		},
 	}
 }

@@ -19,7 +19,7 @@ var levels = map[string]int8{
 	"trace": -1,
 }
 
-func InitLogger(lc *configuration.Configuration) {
+func InitLogger(lc configuration.Configuration) {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
 	// in case the user put some random capitals letter

@@ -28,10 +28,10 @@ func commanderRun(cmd *cobra.Command, args []string) {
 	}
 
 	// initialize global logging
-	logger.InitLogger(config)
+	logger.InitLogger(*config)
 
 	// initialize service
-	c := commander.New(config)
+	c := commander.New(*config)
 
 	// signal channel to capture system calls
 	done := make(chan bool, 1)

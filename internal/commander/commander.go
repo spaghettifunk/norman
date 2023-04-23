@@ -9,15 +9,16 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spaghettifunk/norman/internal/commander/api"
 	configuration "github.com/spaghettifunk/norman/internal/common"
+	"github.com/spaghettifunk/norman/internal/common/middleware"
 )
 
 type Commander struct {
 	Name   string
-	config *configuration.Configuration
+	config configuration.Configuration
 	server *http.Server
 }
 
-func New(config *configuration.Configuration) *Commander {
+func New(config configuration.Configuration) *Commander {
 	addr := fmt.Sprintf("%s:%d", config.Commander.Address, config.Commander.Port)
 	return &Commander{
 		Name:   "commander",
@@ -28,7 +29,9 @@ func New(config *configuration.Configuration) *Commander {
 
 func initServer(address string) *http.Server {
 	router := http.NewServeMux()
-	router.HandleFunc("/", api.Version)
+
+	// subscribe routes
+	router.Handle("/", middleware.WithLogging(api.Version()))
 
 	return &http.Server{
 		Addr:         address,

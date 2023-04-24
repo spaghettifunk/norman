@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	api "github.com/spaghettifunk/norman/internal/storage/v1"
+	api "github.com/spaghettifunk/norman/internal/aqua/proto/v1"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 )

@@ -42,12 +42,21 @@ func commanderRun(cmd *cobra.Command, args []string) {
 	go func() {
 		// capture sigterm and other system call here
 		<-sigCh
+		// shutdown http server
 		if err := c.ShutdownServer(); err != nil {
 			log.Fatal().Err(err)
 			return
 		}
+
+		// shutdown aqua service
+
 		log.Info().Msg("Commander Server is down. Bye Bye!")
 		close(done)
+	}()
+
+	// start aqua service goroutine
+	go func() {
+
 	}()
 
 	// start http server goroutine

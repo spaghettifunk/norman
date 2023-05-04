@@ -1,0 +1,16 @@
+{
+  "CN": "My Awesome CA",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "NL",
+      "L": "GR",
+      "ST": "Groningen",
+      "O": "Norman",
+      "OU": "Normal Realtime Database"
+    }
+  ]
+}

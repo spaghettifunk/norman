@@ -5,6 +5,7 @@ import (
 )
 
 type Configuration struct {
+	ConfigDir string     `toml:"config_dir"`
 	Commander *commander `toml:"commander"`
 	Broker    *broker    `toml:"broker"`
 	Storage   *storage   `toml:"storage"`
@@ -14,6 +15,17 @@ type Configuration struct {
 type commander struct {
 	Address string `toml:"address"`
 	Port    int    `toml:"port"`
+	Aqua    aqua   `toml:"aqua"`
+}
+
+type aqua struct {
+	CAFile               string `toml:"cafile"`
+	ServerCertFile       string `toml:"server_cert_file"`
+	ServerKeyFile        string `toml:"server_key_file"`
+	RootClientCertFile   string `toml:"root_client_cert_file"`
+	RootClientKeyFile    string `toml:"root_client_key_file"`
+	NobodyClientCertFile string `toml:"nobody_client_cert_file"`
+	NobodyClientKeyFile  string `toml:"nobody_client_key_file"`
 }
 
 type broker struct {
@@ -33,9 +45,19 @@ type logger struct {
 
 func Fetch() *Configuration {
 	return &Configuration{
+		ConfigDir: getStringOrDefault("config_dir", "/Users/davideberdin/Documents/github/norman/test/"),
 		Commander: &commander{
 			Address: getStringOrDefault("commander.address", "127.0.0.1"),
 			Port:    getIntOrDefault("commander.port", 8080),
+			Aqua: aqua{
+				CAFile:               getStringOrDefault("commander.aqua.cafile", "certs/ca.pem"),
+				ServerCertFile:       getStringOrDefault("commander.aqua.server_cert_file", "certs/server.pem"),
+				ServerKeyFile:        getStringOrDefault("commander.aqua.server_key_file", "certs/server-key.pem"),
+				RootClientCertFile:   getStringOrDefault("commander.aqua.root_client_cert_file", "certs/root-client.pem"),
+				RootClientKeyFile:    getStringOrDefault("commander.aqua.root_client_key_file", "certs/root-client-key.pem"),
+				NobodyClientCertFile: getStringOrDefault("commander.aqua.nobody_client_cert_file", "certs/nobody-client.pem"),
+				NobodyClientKeyFile:  getStringOrDefault("commander.aqua.nobody_client_key_file", "certs/nobody-client-key.pem"),
+			},
 		},
 		Broker: &broker{
 			Address: getStringOrDefault("broker.address", "127.0.0.1"),

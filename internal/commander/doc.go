@@ -1,7 +1,6 @@
 package commander
 
 /*
-
 The commander service is responsible for the following:
 
 * Maintaining global metadata (e.g. configs and schemas) of the system with
@@ -21,5 +20,4 @@ They are responsible for initializing real-time consumption and coordination of
 persisting real-time segments into the segment store periodically.
 
 * Undertaking other management activities such as managing retention of segments, validations.
-
 */

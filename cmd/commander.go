@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -61,7 +62,8 @@ func commanderRun(cmd *cobra.Command, args []string) {
 
 	// start http server goroutine
 	go func() {
-		if err := c.StartServer(); err != nil {
+		addr := fmt.Sprintf("%s:%d", config.Commander.Address, config.Commander.Port)
+		if err := c.StartServer(addr); err != nil {
 			log.Fatal().Err(err)
 			close(done)
 		}

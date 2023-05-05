@@ -3,7 +3,9 @@ package discovery
 import (
 	"net"
 
+	"github.com/hashicorp/raft"
 	"github.com/hashicorp/serf/serf"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -118,7 +120,11 @@ func (m *Membership) Leave() error {
 }
 
 func (m *Membership) logError(err error, msg string, member serf.Member) {
-	log.Error().Err(err).Fields(map[string]interface{}{
+	e := log.WithLevel(zerolog.ErrorLevel)
+	if err == raft.ErrNotLeader {
+		e = log.WithLevel(zerolog.DebugLevel)
+	}
+	e.Err(err).Fields(map[string]interface{}{
 		"name":     member.Name,
 		"rpc_addr": member.Tags["rpc_addr"],
 	}).Msg(msg)

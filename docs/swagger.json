@@ -1,0 +1,16 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This is the swagger definition of the Commander APIs",
+        "title": "Commander API",
+        "contact": {},
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "v0.0.1"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {}
+}

@@ -1,0 +1,42 @@
+{
+  "name": "flights",
+  "dimensionFieldSpecs": [
+    {
+      "name": "flightNumber",
+      "dataType": "LONG"
+    },
+    {
+      "name": "tags",
+      "dataType": "STRING",
+      "singleValueField": false,
+      "defaultNullValue": "null"
+    }
+  ],
+  "metricFieldSpecs": [
+    {
+      "name": "price",
+      "dataType": "DOUBLE",
+      "defaultNullValue": 0
+    }
+  ],
+  "dateTimeFieldSpecs": [
+    {
+      "name": "millisSinceEpoch",
+      "dataType": "LONG",
+      "format": "EPOCH",
+      "granularity": "15:MINUTES"
+    },
+    {
+      "name": "hoursSinceEpoch",
+      "dataType": "INT",
+      "format": "EPOCH|HOURS",
+      "granularity": "1:HOURS"
+    },
+    {
+      "name": "dateString",
+      "dataType": "STRING",
+      "format": "SIMPLE_DATE_FORMAT|yyyy-MM-dd",
+      "granularity": "1:DAYS"
+    }
+  ]
+}

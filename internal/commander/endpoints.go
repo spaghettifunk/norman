@@ -1,9 +1,11 @@
 package commander
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/spaghettifunk/norman/internal/common/model"
 )
 
 const (
@@ -12,7 +14,7 @@ const (
 )
 
 func (c *Commander) APIVersion(ctx *fiber.Ctx) error {
-	ctx.Status(200).JSON(fiber.Map{
+	ctx.Status(http.StatusOK).JSON(fiber.Map{
 		"API Name":    apiName,
 		"API Version": apiVersion,
 		"timestamp":   time.Now().Format("2006-01-02 15:04:05"),
@@ -104,6 +106,10 @@ func (c *Commander) DeleteSegment(ctx *fiber.Ctx) error {
 /*
 Schema routes
 */
+type CreateSchemaRequest struct {
+	model.Schema
+}
+
 func (c *Commander) GetSchemas(ctx *fiber.Ctx) error {
 	return nil
 }
@@ -113,6 +119,26 @@ func (c *Commander) GetSchema(ctx *fiber.Ctx) error {
 }
 
 func (c *Commander) CreateSchema(ctx *fiber.Ctx) error {
+	// Validate the body payload -- a bit useless for now
+	payload := &CreateSchemaRequest{}
+	if err := ctx.BodyParser(&payload); err != nil {
+		return err
+	}
+
+	// TODO: change this to a better Request struct
+	// we pass the body directly for now
+	if err := c.schemaManager.CreateSchema(ctx.Body()); err != nil {
+		ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to create Schema",
+			"error":   err.Error(),
+		})
+		return err
+	}
+	ctx.Status(http.StatusOK).JSON(fiber.Map{
+		"message":   "Schema created successfully",
+		"timestamp": time.Now().Format("2006-01-02 15:04:05"),
+	})
+
 	return nil
 }
 

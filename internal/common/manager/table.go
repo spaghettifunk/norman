@@ -28,12 +28,16 @@ func (tm *TableManager) CreateTable(isOffline bool, config []byte) error {
 			return err
 		}
 		tm.OfflineTables = append(tm.OfflineTables, tb)
+		// TODO: notify Aqua that a new Offline table has been created
+		// ...
 	} else {
 		tb, err := model.NewRealtimeTable(config)
 		if err != nil {
 			return err
 		}
 		tm.ReatltimeTables = append(tm.ReatltimeTables, tb)
+		// TODO: notify Aqua that a new Realtime table has been created
+		// ...
 	}
 	return nil
 }

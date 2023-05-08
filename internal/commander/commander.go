@@ -8,8 +8,6 @@ import (
 	"github.com/gofiber/swagger"
 	"github.com/rs/zerolog/log"
 	configuration "github.com/spaghettifunk/norman/internal/common"
-
-	_ "github.com/spaghettifunk/norman/docs"
 )
 
 type Commander struct {
@@ -18,13 +16,6 @@ type Commander struct {
 	app    *fiber.App
 }
 
-// @title Commander API
-// @version v0.0.1
-// @description This is the swagger definition of the Commander APIs
-// @license.name Apache 2.0
-// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
-// @host localhost:8080
-// @BasePath /
 func New(config configuration.Configuration) *Commander {
 	// Create new Fiber application
 	app := fiber.New(fiber.Config{

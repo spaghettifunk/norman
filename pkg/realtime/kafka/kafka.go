@@ -10,6 +10,6 @@ func New() *KafkaIngestor {
 	return &KafkaIngestor{}
 }
 
-func (k *KafkaIngestor) GetLog(log []byte) error {
+func (k *KafkaIngestor) GetEvent() error {
 	return nil
 }

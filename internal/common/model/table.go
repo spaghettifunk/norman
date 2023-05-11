@@ -50,10 +50,11 @@ type IndexConfiguration struct {
 	OnHeapDictionaryColumns                    []string               `json:"onHeapDictionaryColumns"`
 	VarLengthDictionaryColumns                 []string               `json:"varLengthDictionaryColumns"`
 	SegmentPartitionConfiguration              struct {
-		PrimaryKey struct {
+		Column struct {
+			Name          string `json:"name"`
 			FunctionName  string `json:"functionName"`
 			NumPartitions int    `json:"numPartitions"`
-		} `json:"primarykey"`
+		} `json:"column"`
 	} `json:"segmentPartitionConfiguration"`
 }
 

@@ -14,8 +14,10 @@ const (
 	Kinesis IngestionType = "kinesis"
 )
 
+// RealtimeIngestion defines the interface for the clients where the
+// events are read from
 type RealtimeIngestion interface {
-	GetLog(log []byte) error
+	GetEvent() error
 }
 
 type Realtime struct {
@@ -40,8 +42,8 @@ func New(t IngestionType) (*Realtime, error) {
 }
 
 // ReadLog reads the incoming string
-func (i *Realtime) ReadLog(data string) error {
-	err := i.Client.GetLog([]byte(data))
+func (i *Realtime) ReadLog() error {
+	err := i.Client.GetEvent()
 	if err != nil {
 		return err
 	}

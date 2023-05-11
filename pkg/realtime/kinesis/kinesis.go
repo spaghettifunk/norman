@@ -10,6 +10,6 @@ func New() *KinesisIngestor {
 	return &KinesisIngestor{}
 }
 
-func (k *KinesisIngestor) GetLog(log []byte) error {
+func (k *KinesisIngestor) GetEvent() error {
 	return nil
 }

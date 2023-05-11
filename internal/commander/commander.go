@@ -59,13 +59,22 @@ func (c *Commander) setupRoutes() {
 	tenantEndpoints.Delete("/:tenantId", c.DeleteTenant)
 
 	// schema endpoints
-	schemaEndpoints := tenantEndpoints.Group("/schemas")
+	schemaEndpoints := tenantEndpoints.Group("/:tenantId/schemas")
 	schemaEndpoints.Get("/", c.GetSchemas)
 	schemaEndpoints.Post("/", c.CreateSchema)
 	schemaEndpoints.Get("/:schemaName", c.GetSchema)
 	schemaEndpoints.Put("/:schemaName", c.UpdateSchema)
 	schemaEndpoints.Patch("/:schemaName", c.PatchSchema)
 	schemaEndpoints.Delete("/:schemaName", c.DeleteSchema)
+
+	// table endpoints
+	tableEndpoints := tenantEndpoints.Group("/:tenantId/tables")
+	tableEndpoints.Get("/", c.GetTables)
+	tableEndpoints.Post("/", c.CreateTable)
+	tableEndpoints.Get("/:tableName", c.GetTable)
+	tableEndpoints.Put("/:tableName", c.UpdateTable)
+	tableEndpoints.Patch("/:tableName", c.PatchTable)
+	tableEndpoints.Delete("/:tableName", c.DeleteTable)
 }
 
 func (c *Commander) StartServer(address string) error {

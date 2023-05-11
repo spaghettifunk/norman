@@ -77,33 +77,6 @@ func (c *Commander) DeleteTable(ctx *fiber.Ctx) error {
 }
 
 /*
-Segment routes
-*/
-func (c *Commander) GetSegments(ctx *fiber.Ctx) error {
-	return nil
-}
-
-func (c *Commander) GetSegment(ctx *fiber.Ctx) error {
-	return nil
-}
-
-func (c *Commander) CreateSegment(ctx *fiber.Ctx) error {
-	return nil
-}
-
-func (c *Commander) UpdateSegment(ctx *fiber.Ctx) error {
-	return nil
-}
-
-func (c *Commander) PatchSegment(ctx *fiber.Ctx) error {
-	return nil
-}
-
-func (c *Commander) DeleteSegment(ctx *fiber.Ctx) error {
-	return nil
-}
-
-/*
 Schema routes
 */
 type CreateSchemaRequest struct {

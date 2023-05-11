@@ -15,7 +15,7 @@ type Configuration struct {
 type commander struct {
 	Address string `toml:"address"`
 	Port    int    `toml:"port"`
-	Aqua    aqua   `toml:"aqua"`
+	Aqua    *aqua  `toml:"aqua"`
 }
 
 type aqua struct {
@@ -34,8 +34,14 @@ type broker struct {
 }
 
 type storage struct {
-	Address string `toml:"address"`
-	Port    int    `toml:"port"`
+	Address     string       `toml:"address"`
+	Port        int          `toml:"port"`
+	DeepStorage *deepStorage `toml:"deep_storage"`
+}
+
+type deepStorage struct {
+	Type   string `toml:"type"`
+	Bucket string `toml:"bucket"`
 }
 
 type logger struct {
@@ -49,7 +55,7 @@ func Fetch() *Configuration {
 		Commander: &commander{
 			Address: getStringOrDefault("commander.address", "127.0.0.1"),
 			Port:    getIntOrDefault("commander.port", 8080),
-			Aqua: aqua{
+			Aqua: &aqua{
 				CAFile:               getStringOrDefault("commander.aqua.cafile", "certs/ca.pem"),
 				ServerCertFile:       getStringOrDefault("commander.aqua.server_cert_file", "certs/server.pem"),
 				ServerKeyFile:        getStringOrDefault("commander.aqua.server_key_file", "certs/server-key.pem"),
@@ -66,6 +72,10 @@ func Fetch() *Configuration {
 		Storage: &storage{
 			Address: getStringOrDefault("storage.address", "127.0.0.1"),
 			Port:    getIntOrDefault("storage.port", 8082),
+			DeepStorage: &deepStorage{
+				Type:   getStringOrDefault("storage.deep_storage", "s3"),
+				Bucket: getStringOrDefault("storage.deep_storage", "test-deep-storage"),
+			},
 		},
 		Logger: &logger{
 			Level:  getStringOrDefault("logger.level", "info"),

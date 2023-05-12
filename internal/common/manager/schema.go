@@ -4,6 +4,7 @@ import "github.com/spaghettifunk/norman/internal/common/model"
 
 type SchemaManager struct {
 	Schemas []*model.Schema
+	// Aqua gRPC client
 }
 
 func NewSchemaManager() *SchemaManager {

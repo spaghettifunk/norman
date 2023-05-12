@@ -16,7 +16,7 @@ type Commander struct {
 	config        configuration.Configuration
 	app           *fiber.App
 	schemaManager *manager.SchemaManager
-	tableManager  *manager.TableManager
+	tableManager  *manager.IngestionJobManager
 }
 
 func New(config configuration.Configuration) *Commander {
@@ -35,7 +35,7 @@ func New(config configuration.Configuration) *Commander {
 		config:        config,
 		app:           app,
 		schemaManager: manager.NewSchemaManager(),
-		tableManager:  manager.NewTableManager(),
+		tableManager:  manager.NewIngestionJobManager(),
 	}
 
 	c.setupRoutes()
@@ -67,14 +67,14 @@ func (c *Commander) setupRoutes() {
 	schemaEndpoints.Patch("/:schemaName", c.PatchSchema)
 	schemaEndpoints.Delete("/:schemaName", c.DeleteSchema)
 
-	// table endpoints
-	tableEndpoints := tenantEndpoints.Group("/:tenantId/tables")
-	tableEndpoints.Get("/", c.GetTables)
-	tableEndpoints.Post("/", c.CreateTable)
-	tableEndpoints.Get("/:tableName", c.GetTable)
-	tableEndpoints.Put("/:tableName", c.UpdateTable)
-	tableEndpoints.Patch("/:tableName", c.PatchTable)
-	tableEndpoints.Delete("/:tableName", c.DeleteTable)
+	// ingestion job endpoints
+	jobEndpoints := tenantEndpoints.Group("/:tenantId/jobs")
+	jobEndpoints.Get("/", c.GetJobs)
+	jobEndpoints.Post("/", c.CreateJob)
+	jobEndpoints.Get("/:jobID", c.GetJob)
+	jobEndpoints.Put("/:jobID", c.UpdateJob)
+	jobEndpoints.Patch("/:jobID", c.PatchJob)
+	jobEndpoints.Delete("/:jobID", c.DeleteJob)
 }
 
 func (c *Commander) StartServer(address string) error {

@@ -2,13 +2,14 @@ package segment
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 
+	"github.com/goccy/go-json"
 	"github.com/google/uuid"
 )
 
+// TODO: add mutex here
 type Segment struct {
 	ID   uuid.UUID `json:"-"`
 	Rows []*Row    `json:"-"`
@@ -35,6 +36,7 @@ func (s *Segment) InsertRow(values map[*Column]interface{}) error {
 }
 
 // Flush persist the segment on disk on the given directory
+// TODO: add mutex here
 func (s *Segment) Flush(dir string, reset bool) error {
 	fp := fmt.Sprintf("%s/%s.norman", dir, s.ID.String())
 
@@ -43,12 +45,14 @@ func (s *Segment) Flush(dir string, reset bool) error {
 		return err
 	}
 
-	err := os.WriteFile(fp, b.Bytes(), 0644)
+	if err := os.WriteFile(fp, b.Bytes(), 0644); err != nil {
+		return err
+	}
 
 	if reset {
 		return s.Reset()
 	}
-	return err
+	return nil
 }
 
 func (s *Segment) Reset() error {

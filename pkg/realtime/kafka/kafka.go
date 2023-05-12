@@ -3,9 +3,12 @@ package kafka
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -29,6 +32,8 @@ type KafkaIngestor struct {
 	Topic    string
 	Brokers  []string
 	ready    chan bool
+	// segment manager
+	// ....
 }
 
 func NewIngestor(kcfg *ingestion.KafkaConfiguration) (*KafkaIngestor, error) {
@@ -85,6 +90,9 @@ func (k *KafkaIngestor) Initialize() error {
 }
 
 func (k *KafkaIngestor) GetEvents(wg *sync.WaitGroup) context.CancelFunc {
+	keepRunning := true
+	consumptionIsPaused := false
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	wg.Add(1)
@@ -107,7 +115,38 @@ func (k *KafkaIngestor) GetEvents(wg *sync.WaitGroup) context.CancelFunc {
 
 	<-k.ready // Await till the consumer has been set up
 	log.Info().Msg("Sarama consumer up and running!...")
+
+	sigusr1 := make(chan os.Signal, 1)
+	signal.Notify(sigusr1, syscall.SIGUSR1)
+
+	sigterm := make(chan os.Signal, 1)
+	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
+
+	for keepRunning {
+		select {
+		case <-ctx.Done():
+			log.Info().Msg("terminating: context cancelled")
+			keepRunning = false
+		case <-sigterm:
+			log.Info().Msg("terminating: via signal")
+			keepRunning = false
+		case <-sigusr1:
+			k.toggleConsumptionFlow(&consumptionIsPaused)
+		}
+	}
+
 	return cancel
+}
+
+func (k *KafkaIngestor) toggleConsumptionFlow(isPaused *bool) {
+	if *isPaused {
+		k.Consumer.ResumeAll()
+		log.Info().Msg("resuming consumption")
+	} else {
+		k.Consumer.PauseAll()
+		log.Info().Msg("pausing consumption")
+	}
+	*isPaused = !*isPaused
 }
 
 // Close closes the producer object
@@ -144,20 +183,16 @@ func (k *KafkaIngestor) ConsumeClaim(session sarama.ConsumerGroupSession, claim 
 	for {
 		select {
 		case message := <-claim.Messages():
-			log.Printf("Message claimed: value = %s, timestamp = %v, topic = %s", string(message.Value), message.Timestamp, message.Topic)
-
 			// TODO: create segment here
 			buffer.InsertRow(nil)
-
 			if len(buffer.Rows) > MaxBatchedEventsPerSegment {
 				// Flush Segment
+				// TODO: dir should come from Commander/Aqua
 				if err := buffer.Flush(fmt.Sprintf("/tmp/norman/%s/%s", k.Topic, time.Now().String()), true); err != nil {
 					log.Panic().Err(err).Msg("error in flushing the segment")
 				}
 			}
-
 			session.MarkMessage(message, "")
-
 		case <-ticker.C:
 			// Refresh pipe
 			tt := time.Now()
@@ -165,6 +200,7 @@ func (k *KafkaIngestor) ConsumeClaim(session sarama.ConsumerGroupSession, claim 
 				log.Debug().Msg("Force flush (interval) triggered")
 
 				// Flush Segment
+				// TODO: dir should come from Commander/Aqua
 				if err := buffer.Flush(fmt.Sprintf("/tmp/norman/%s/%s", k.Topic, time.Now().String()), true); err != nil {
 					log.Panic().Err(err).Msg("error in flushing the segment")
 				}
@@ -172,7 +208,6 @@ func (k *KafkaIngestor) ConsumeClaim(session sarama.ConsumerGroupSession, claim 
 				fflush = tt.Add(flushInterval)
 				log.Debug().Msg("Force flush (interval) finished")
 			}
-
 		case <-session.Context().Done():
 			return nil
 		}

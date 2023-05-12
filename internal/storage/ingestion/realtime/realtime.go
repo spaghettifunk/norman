@@ -5,18 +5,10 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/spaghettifunk/norman/internal/common/model"
 	"github.com/spaghettifunk/norman/internal/storage/ingestion"
 	"github.com/spaghettifunk/norman/pkg/realtime/kafka"
 	"github.com/spaghettifunk/norman/pkg/realtime/kinesis"
-)
-
-type IngestionType string
-
-const (
-	// Kafka represents the Kafka type for realtime ingestion
-	Kafka IngestionType = "kafka"
-	// Kinesis represents the Kinesis type for realtime ingestion
-	Kinesis IngestionType = "kinesis"
 )
 
 // RealtimeIngestion defines the interface for the clients where the
@@ -28,23 +20,24 @@ type RealtimeIngestion interface {
 }
 
 type Realtime struct {
-	Type   IngestionType
-	Client RealtimeIngestion
-	// configuration here...
+	Type         ingestion.StreamType
+	Client       RealtimeIngestion
+	IngestionJob *model.IngestionJob
+	Schema       *model.Schema
 }
 
-func New(t IngestionType, ic *ingestion.IngestionConfiguration) (*Realtime, error) {
+func New(ic *ingestion.StreamIngestionConfiguration) (*Realtime, error) {
 	ingestor := &Realtime{
-		Type: t,
+		Type: *ic.Type,
 	}
 	var err error
-	switch t {
-	case Kafka:
+	switch *ic.Type {
+	case ingestion.StreamKafka:
 		ingestor.Client, err = kafka.NewIngestor(ic.KafkaConfiguration)
-	case Kinesis:
+	case ingestion.StreamKinesis:
 		ingestor.Client = kinesis.New()
 	default:
-		return nil, fmt.Errorf("invalid Realtime Ingestion type: %s", t)
+		return nil, fmt.Errorf("invalid Realtime Ingestion type: %s", *ic.Type)
 	}
 	if err != nil {
 		return nil, err
@@ -52,11 +45,11 @@ func New(t IngestionType, ic *ingestion.IngestionConfiguration) (*Realtime, erro
 	return ingestor, nil
 }
 
-// ReadLog reads the incoming string
-func (i *Realtime) ReadLog() error {
+// ReadEvents reads the incoming events
+func (i *Realtime) ReadEvents() error {
 	wg := &sync.WaitGroup{}
 	cancel := i.Client.GetEvents(wg)
 	cancel()
 	wg.Wait()
-	return nil
+	return i.Client.Close()
 }

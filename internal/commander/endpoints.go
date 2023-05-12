@@ -50,29 +50,29 @@ func (c *Commander) DeleteTenant(ctx *fiber.Ctx) error {
 }
 
 /*
-Table routes
+Ingestion Job routes
 */
-func (c *Commander) GetTables(ctx *fiber.Ctx) error {
+func (c *Commander) GetJobs(ctx *fiber.Ctx) error {
 	return nil
 }
 
-func (c *Commander) GetTable(ctx *fiber.Ctx) error {
+func (c *Commander) GetJob(ctx *fiber.Ctx) error {
 	return nil
 }
 
-func (c *Commander) CreateTable(ctx *fiber.Ctx) error {
+func (c *Commander) CreateJob(ctx *fiber.Ctx) error {
 	return nil
 }
 
-func (c *Commander) UpdateTable(ctx *fiber.Ctx) error {
+func (c *Commander) UpdateJob(ctx *fiber.Ctx) error {
 	return nil
 }
 
-func (c *Commander) PatchTable(ctx *fiber.Ctx) error {
+func (c *Commander) PatchJob(ctx *fiber.Ctx) error {
 	return nil
 }
 
-func (c *Commander) DeleteTable(ctx *fiber.Ctx) error {
+func (c *Commander) DeleteJob(ctx *fiber.Ctx) error {
 	return nil
 }
 

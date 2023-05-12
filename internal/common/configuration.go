@@ -72,10 +72,6 @@ func Fetch() *Configuration {
 		Storage: &storage{
 			Address: getStringOrDefault("storage.address", "127.0.0.1"),
 			Port:    getIntOrDefault("storage.port", 8082),
-			DeepStorage: &deepStorage{
-				Type:   getStringOrDefault("storage.deep_storage", "s3"),
-				Bucket: getStringOrDefault("storage.deep_storage", "test-deep-storage"),
-			},
 		},
 		Logger: &logger{
 			Level:  getStringOrDefault("logger.level", "info"),

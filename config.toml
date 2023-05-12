@@ -24,10 +24,6 @@ port = 8081
 address = "127.0.0.1"
 port = 8082
 
-    [storage.deep_storage]
-    type = "s3"
-    bucket = "test-deep-storage"
-
 [logger]
 level = "trace"
 pretty = true

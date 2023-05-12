@@ -7,7 +7,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	configuration "github.com/spaghettifunk/norman/internal/common"
 	paws "github.com/spaghettifunk/norman/pkg/aws"
 	offline_blob "github.com/spaghettifunk/norman/pkg/offline/blob"
 
@@ -19,7 +18,6 @@ import (
 )
 
 var (
-	config         = configuration.Fetch()
 	s3TestEndpoint = "localhost:4572" // TODO: this is the endpoint of localstack
 	s3TestBucket   = "test"
 	s3TestRegion   = "eu-west-1"

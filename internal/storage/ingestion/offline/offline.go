@@ -1,2 +1,1 @@
-package offline
-
+package offline_ingestion

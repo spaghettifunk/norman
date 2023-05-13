@@ -6,8 +6,8 @@ type KinesisIngestor struct {
 	// configuration here...
 }
 
-func New() *KinesisIngestor {
-	return &KinesisIngestor{}
+func New() (*KinesisIngestor, error) {
+	return &KinesisIngestor{}, nil
 }
 
 func (k *KinesisIngestor) Initialize() error {

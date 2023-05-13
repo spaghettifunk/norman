@@ -35,6 +35,8 @@ func New(config configuration.Configuration) (*Commander, error) {
 	if err != nil {
 		return nil, err
 	}
+	// initialize job manager
+	ijb.Initialize()
 
 	c := &Commander{
 		Name:                "commander",
@@ -89,6 +91,15 @@ func (c *Commander) StartServer(address string) error {
 }
 
 func (c *Commander) ShutdownServer() error {
-	log.Info().Msg("Shutting down server...")
+	log.Info().Msg("shutting down schema manager...")
+	if err := c.schemaManager.Shutdown(); err != nil {
+		return err
+	}
+	log.Info().Msg("shutting down ingestion job manager...")
+	if err := c.ingestionJobManager.Shutdown(); err != nil {
+		return err
+	}
+
+	log.Info().Msg("shutting down server...")
 	return c.app.Shutdown()
 }

@@ -61,7 +61,7 @@ func NewWorkerPool(numWorkers int, channelSize int) (Pool, error) {
 
 func (p *WorkerPool) Start() {
 	p.start.Do(func() {
-		log.Info().Msgf("starting simple worker pool")
+		log.Info().Msgf("starting worker pool")
 		p.startWorkers()
 	})
 }

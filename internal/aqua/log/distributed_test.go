@@ -1,4 +1,3 @@
-// START: distributed_log_test_intro
 package log_test
 
 import (

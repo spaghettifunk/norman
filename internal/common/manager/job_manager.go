@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/spaghettifunk/norman/internal/common/model"
+	common_ingestion "github.com/spaghettifunk/norman/internal/common/ingestion"
 	"github.com/spaghettifunk/norman/internal/storage/ingestion"
 	"github.com/spaghettifunk/norman/pkg/workerpool"
 )
@@ -38,7 +38,7 @@ func (ijm *IngestionJobManager) Initialize() error {
 // TODO: add a Final State Machine for handling the job
 func (ijm *IngestionJobManager) Execute(config []byte) error {
 	// parse config and transform into an IngestionJob
-	j, err := model.NewIngestionJob(config)
+	j, err := common_ingestion.NewIngestionJob(config)
 	if err != nil {
 		return err
 	}

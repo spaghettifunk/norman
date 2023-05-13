@@ -5,7 +5,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/spaghettifunk/norman/internal/common/model"
+	"github.com/spaghettifunk/norman/internal/common/ingestion"
+	"github.com/spaghettifunk/norman/internal/common/schema"
 )
 
 const (
@@ -53,7 +54,7 @@ func (c *Commander) DeleteTenant(ctx *fiber.Ctx) error {
 Ingestion Job routes
 */
 type CreateIngestionJobRequest struct {
-	model.IngestionJobConfiguration
+	ingestion.IngestionJobConfiguration
 }
 
 func (c *Commander) GetJobs(ctx *fiber.Ctx) error {
@@ -84,7 +85,7 @@ func (c *Commander) DeleteJob(ctx *fiber.Ctx) error {
 Schema routes
 */
 type CreateSchemaRequest struct {
-	model.Schema
+	schema.Schema
 }
 
 func (c *Commander) GetSchemas(ctx *fiber.Ctx) error {

@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	raftboltdb "github.com/hashicorp/raft-boltdb"
@@ -24,10 +25,7 @@ type DistributedLog struct {
 	raft   *raft.Raft
 }
 
-func NewDistributedLog(dataDir string, config Config) (
-	*DistributedLog,
-	error,
-) {
+func NewDistributedLog(dataDir string, config Config) (*DistributedLog, error) {
 	l := &DistributedLog{
 		config: config,
 	}
@@ -64,31 +62,20 @@ func (l *DistributedLog) setupRaft(dataDir string) error {
 		return err
 	}
 
-	stableStore, err := raftboltdb.NewBoltStore(
-		filepath.Join(dataDir, "raft", "stable"),
-	)
+	stableStore, err := raftboltdb.NewBoltStore(filepath.Join(dataDir, "raft", "stable"))
 	if err != nil {
 		return err
 	}
 
 	retain := 1
-	snapshotStore, err := raft.NewFileSnapshotStore(
-		filepath.Join(dataDir, "raft"),
-		retain,
-		os.Stderr,
-	)
+	snapshotStore, err := raft.NewFileSnapshotStore(filepath.Join(dataDir, "raft"), retain, os.Stderr)
 	if err != nil {
 		return err
 	}
 
-	maxPool := 5
+	maxPool := runtime.NumCPU()
 	timeout := 10 * time.Second
-	transport := raft.NewNetworkTransport(
-		l.config.Raft.StreamLayer,
-		maxPool,
-		timeout,
-		os.Stderr,
-	)
+	transport := raft.NewNetworkTransport(l.config.Raft.StreamLayer, maxPool, timeout, os.Stderr)
 
 	config := raft.DefaultConfig()
 	config.LocalID = l.config.Raft.LocalID
@@ -105,14 +92,7 @@ func (l *DistributedLog) setupRaft(dataDir string) error {
 		config.CommitTimeout = l.config.Raft.CommitTimeout
 	}
 
-	l.raft, err = raft.NewRaft(
-		config,
-		fsm,
-		logStore,
-		stableStore,
-		snapshotStore,
-		transport,
-	)
+	l.raft, err = raft.NewRaft(config, fsm, logStore, stableStore, snapshotStore, transport)
 	if err != nil {
 		return err
 	}
@@ -129,10 +109,7 @@ func (l *DistributedLog) setupRaft(dataDir string) error {
 }
 
 func (l *DistributedLog) Append(record *api.Record) (uint64, error) {
-	res, err := l.apply(
-		AppendRequestType,
-		&api.ProduceRequest{Record: record},
-	)
+	res, err := l.apply(AppendRequestType, &api.ProduceRequest{Record: record})
 	if err != nil {
 		return 0, err
 	}
@@ -351,6 +328,7 @@ func (l *logStore) GetLog(index uint64, out *raft.Log) error {
 func (l *logStore) StoreLog(record *raft.Log) error {
 	return l.StoreLogs([]*raft.Log{record})
 }
+
 func (l *logStore) StoreLogs(records []*raft.Log) error {
 	for _, record := range records {
 		if _, err := l.Append(&api.Record{
@@ -376,11 +354,7 @@ type StreamLayer struct {
 	peerTLSConfig   *tls.Config
 }
 
-func NewStreamLayer(
-	ln net.Listener,
-	serverTLSConfig,
-	peerTLSConfig *tls.Config,
-) *StreamLayer {
+func NewStreamLayer(ln net.Listener, serverTLSConfig, peerTLSConfig *tls.Config) *StreamLayer {
 	return &StreamLayer{
 		ln:              ln,
 		serverTLSConfig: serverTLSConfig,
@@ -390,10 +364,7 @@ func NewStreamLayer(
 
 const RaftRPC = 1
 
-func (s *StreamLayer) Dial(
-	addr raft.ServerAddress,
-	timeout time.Duration,
-) (net.Conn, error) {
+func (s *StreamLayer) Dial(addr raft.ServerAddress, timeout time.Duration) (net.Conn, error) {
 	dialer := &net.Dialer{Timeout: timeout}
 	var conn, err = dialer.Dial("tcp", string(addr))
 	if err != nil {
@@ -420,7 +391,7 @@ func (s *StreamLayer) Accept() (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	if bytes.Compare([]byte{byte(RaftRPC)}, b) != 0 {
+	if !bytes.Equal([]byte{byte(RaftRPC)}, b) {
 		return nil, fmt.Errorf("not a raft rpc")
 	}
 	if s.serverTLSConfig != nil {

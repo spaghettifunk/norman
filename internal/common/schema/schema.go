@@ -1,4 +1,4 @@
-package model
+package schema
 
 import (
 	"github.com/goccy/go-json"

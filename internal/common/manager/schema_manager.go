@@ -1,9 +1,9 @@
 package manager
 
-import "github.com/spaghettifunk/norman/internal/common/model"
+import "github.com/spaghettifunk/norman/internal/common/schema"
 
 type SchemaManager struct {
-	Schemas []*model.Schema
+	Schemas []*schema.Schema
 	// Aqua gRPC client
 }
 
@@ -16,7 +16,7 @@ func (sm *SchemaManager) Initialize() error {
 }
 
 func (sm *SchemaManager) Execute(config []byte) error {
-	s, err := model.NewSchema(config)
+	s, err := schema.NewSchema(config)
 	if err != nil {
 		return err
 	}

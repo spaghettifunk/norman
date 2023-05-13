@@ -15,7 +15,7 @@ func (sm *SchemaManager) Initialize() error {
 	return nil
 }
 
-func (sm *SchemaManager) CreateSchema(config []byte) error {
+func (sm *SchemaManager) Execute(config []byte) error {
 	s, err := model.NewSchema(config)
 	if err != nil {
 		return err
@@ -25,10 +25,6 @@ func (sm *SchemaManager) CreateSchema(config []byte) error {
 	// TODO: notify Aqua that a new Schema has been created
 	// ...
 
-	return nil
-}
-
-func (sm *SchemaManager) Start() error {
 	return nil
 }
 

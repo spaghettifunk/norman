@@ -15,7 +15,6 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/spaghettifunk/norman/internal/common/segment"
-	"github.com/spaghettifunk/norman/internal/storage/ingestion"
 )
 
 var (
@@ -32,11 +31,14 @@ type KafkaIngestor struct {
 	Topic    string
 	Brokers  []string
 	ready    chan bool
+	wg       *sync.WaitGroup
+	ctx      context.Context
+	cancel   context.CancelFunc
 	// segment manager
 	// ....
 }
 
-func NewIngestor(kcfg *ingestion.KafkaConfiguration) (*KafkaIngestor, error) {
+func NewIngestor(kcfg *KafkaConfiguration) (*KafkaIngestor, error) {
 	bs := strings.Split(kcfg.Brokers, ",")
 
 	cfg := createConfiguration(kcfg)
@@ -44,15 +46,20 @@ func NewIngestor(kcfg *ingestion.KafkaConfiguration) (*KafkaIngestor, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
 	return &KafkaIngestor{
 		Consumer: consumer,
 		Topic:    kcfg.Topic,
 		Brokers:  bs,
 		ready:    make(chan bool),
+		wg:       &sync.WaitGroup{},
+		ctx:      ctx,
+		cancel:   cancel,
 	}, nil
 }
 
-func createConfiguration(kcfg *ingestion.KafkaConfiguration) *sarama.Config {
+func createConfiguration(kcfg *KafkaConfiguration) *sarama.Config {
 	cfg := sarama.NewConfig()
 
 	// TODO: these should be specified via the ingestion job config
@@ -86,27 +93,18 @@ func createConfiguration(kcfg *ingestion.KafkaConfiguration) *sarama.Config {
 }
 
 func (k *KafkaIngestor) Initialize() error {
-	return nil
-}
-
-func (k *KafkaIngestor) GetEvents(wg *sync.WaitGroup) context.CancelFunc {
-	keepRunning := true
-	consumptionIsPaused := false
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	wg.Add(1)
+	k.wg.Add(1)
 	go func() {
-		defer wg.Done()
+		defer k.wg.Done()
 		for {
 			// `Consume` should be called inside an infinite loop, when a
 			// server-side rebalance happens, the consumer session will need to be
 			// recreated to get the new claims
-			if err := k.Consumer.Consume(ctx, []string{k.Topic}, k); err != nil {
+			if err := k.Consumer.Consume(k.ctx, []string{k.Topic}, k); err != nil {
 				log.Panic().Msgf("Error from consumer: %v", err)
 			}
 			// check if context was cancelled, signaling that the consumer should stop
-			if ctx.Err() != nil {
+			if k.ctx.Err() != nil {
 				return
 			}
 			k.ready = make(chan bool)
@@ -116,15 +114,25 @@ func (k *KafkaIngestor) GetEvents(wg *sync.WaitGroup) context.CancelFunc {
 	<-k.ready // Await till the consumer has been set up
 	log.Info().Msg("Sarama consumer up and running!...")
 
+	return nil
+}
+
+// GetEvents needs to be called from a goroutine
+func (k *KafkaIngestor) GetEvents() error {
+	keepRunning := true
+	consumptionIsPaused := false
+
+	// TODO: this should come from an API
 	sigusr1 := make(chan os.Signal, 1)
 	signal.Notify(sigusr1, syscall.SIGUSR1)
 
+	// TODO: this should come from an API
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
 
 	for keepRunning {
 		select {
-		case <-ctx.Done():
+		case <-k.ctx.Done():
 			log.Info().Msg("terminating: context cancelled")
 			keepRunning = false
 		case <-sigterm:
@@ -135,7 +143,10 @@ func (k *KafkaIngestor) GetEvents(wg *sync.WaitGroup) context.CancelFunc {
 		}
 	}
 
-	return cancel
+	k.cancel()
+	k.wg.Wait()
+
+	return nil
 }
 
 func (k *KafkaIngestor) toggleConsumptionFlow(isPaused *bool) {
@@ -149,8 +160,8 @@ func (k *KafkaIngestor) toggleConsumptionFlow(isPaused *bool) {
 	*isPaused = !*isPaused
 }
 
-// Close closes the producer object
-func (k *KafkaIngestor) Close() error {
+// Shutdown closes the producer object
+func (k *KafkaIngestor) Shutdown(failure bool) error {
 	return k.Consumer.Close()
 }
 

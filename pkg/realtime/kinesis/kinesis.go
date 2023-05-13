@@ -1,10 +1,5 @@
 package kinesis
 
-import (
-	"context"
-	"sync"
-)
-
 type KinesisIngestor struct {
 	Address string
 	Port    int
@@ -19,10 +14,10 @@ func (k *KinesisIngestor) Initialize() error {
 	return nil
 }
 
-func (k *KinesisIngestor) GetEvents(wg *sync.WaitGroup) context.CancelFunc {
+func (k *KinesisIngestor) GetEvents() error {
 	return nil
 }
 
-func (k *KinesisIngestor) Close() error {
+func (k *KinesisIngestor) Shutdown(failure bool) error {
 	return nil
 }

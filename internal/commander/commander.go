@@ -12,14 +12,14 @@ import (
 )
 
 type Commander struct {
-	Name          string
-	config        configuration.Configuration
-	app           *fiber.App
-	schemaManager *manager.SchemaManager
-	tableManager  *manager.IngestionJobManager
+	Name                string
+	config              configuration.Configuration
+	app                 *fiber.App
+	schemaManager       *manager.SchemaManager
+	ingestionJobManager *manager.IngestionJobManager
 }
 
-func New(config configuration.Configuration) *Commander {
+func New(config configuration.Configuration) (*Commander, error) {
 	// Create new Fiber application
 	app := fiber.New(fiber.Config{
 		AppName:           "commander-api-server",
@@ -30,17 +30,23 @@ func New(config configuration.Configuration) *Commander {
 	// add default middleware
 	app.Use(recover.New())
 
+	// Create the new job manager
+	ijb, err := manager.NewIngestionJobManager()
+	if err != nil {
+		return nil, err
+	}
+
 	c := &Commander{
-		Name:          "commander",
-		config:        config,
-		app:           app,
-		schemaManager: manager.NewSchemaManager(),
-		tableManager:  manager.NewIngestionJobManager(),
+		Name:                "commander",
+		config:              config,
+		app:                 app,
+		schemaManager:       manager.NewSchemaManager(),
+		ingestionJobManager: ijb,
 	}
 
 	c.setupRoutes()
 
-	return c
+	return c, nil
 }
 
 func (c *Commander) setupRoutes() {

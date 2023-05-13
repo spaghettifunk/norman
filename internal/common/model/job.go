@@ -3,28 +3,34 @@ package model
 import (
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"
-	"github.com/spaghettifunk/norman/internal/storage/ingestion"
+	"github.com/spaghettifunk/norman/pkg/realtime/kafka"
+	"github.com/spaghettifunk/norman/pkg/realtime/kinesis"
 )
 
 type IngestionType string
 
 const (
-	Offline  IngestionType = "OFFLINE"
-	Realtime IngestionType = "REALTIME"
+	OfflineLocalStorage     IngestionType = "LOCAL"
+	OfflineGCPStorage       IngestionType = "GCP_CLOUD_STORAGE"
+	OfflineAzureBlobStorage IngestionType = "AZURE_BLOB_STORAGE"
+	OfflineS3               IngestionType = "AWS_S3"
+	OfflineHDFS             IngestionType = "HDFS"
+	StreamKafka             IngestionType = "KAFKA"
+	StreamKinesis           IngestionType = "KINESIS"
 )
 
-type IngestionJob struct {
+type IngestionJobConfiguration struct {
 	ID                     uuid.UUID               `json:"-"`
 	Name                   string                  `json:"name"`
 	Type                   IngestionType           `json:"type"`
-	IndexConfiguration     *IndexConfiguration     `json:"indexConfiguration,omitempty"`
-	TenantConfiguration    *TenantConfiguration    `json:"tenantConfiguration,omitempty"`
+	IndexConfiguration     *indexConfiguration     `json:"indexConfiguration,omitempty"`
+	TenantConfiguration    *tenantConfiguration    `json:"tenantConfiguration,omitempty"`
 	Metadata               map[string]interface{}  `json:"metadata,omitempty"`
-	IngestionConfiguration *IngestionConfiguration `json:"ingestionConfiguration,omitempty"`
-	SegmentConfiguration   *SegmentConfiguration   `json:"segmentConfiguration"`
+	IngestionConfiguration *ingestionConfiguration `json:"ingestionConfiguration,omitempty"`
+	SegmentConfiguration   *segmentConfiguration   `json:"segmentConfiguration"`
 }
 
-type SegmentConfiguration struct {
+type segmentConfiguration struct {
 	SchemaName          string `json:"schemaName"`
 	TimeColumnName      string `json:"timeColumnName"`
 	TimeType            string `json:"timeType"`
@@ -43,7 +49,7 @@ type SegmentConfiguration struct {
 	} `json:"completitionConfiguration,omitempty"`
 }
 
-type IngestionConfiguration struct {
+type ingestionConfiguration struct {
 	FilterConfiguration struct {
 		FilterFunction string `json:"filterFunction,omitempty"`
 	} `json:"filterConfiguration,omitempty"`
@@ -51,11 +57,16 @@ type IngestionConfiguration struct {
 		ColumnName string `json:"columnName,omitempty"`
 		Function   string `json:"function,omitempty"`
 	} `json:"transformConfigurations,omitempty"`
-	StreamIngestionConfiguration *ingestion.StreamIngestionConfiguration `json:"streamIngestionConfigurations,omitempty"`
+	Offline struct {
+	} `json:"offline"`
+	Realtime struct {
+		KafkaConfiguration   *kafka.KafkaConfiguration     `json:"kafka,omitempty"`
+		KinesisConfiguration *kinesis.KinesisConfiguration `json:"kinesis,omitempty"`
+	} `json:"realtime"`
 }
 
-// IndexConfiguration is used to set the way the data is indexed in the Storage
-type IndexConfiguration struct {
+// indexConfiguration is used to set the way the data is indexed in the Storage
+type indexConfiguration struct {
 	InvertedIndexColumns                       []string               `json:"invertedIndexColumns,omitempty"`
 	CreateInvertedIndexDuringSegmentGeneration bool                   `json:"createInvertedIndexDuringSegmentGeneration,omitempty"`
 	SortedColumn                               []string               `json:"sortedColumn,omitempty"`
@@ -74,7 +85,7 @@ type IndexConfiguration struct {
 	} `json:"segmentPartitionConfiguration,omitempty"`
 }
 
-type TenantConfiguration struct {
+type tenantConfiguration struct {
 	// BrokerLabel is the name of the broker instance
 	BrokerLabel string
 	// StorageLabel is the name of the storage instance
@@ -85,7 +96,8 @@ type JobStatus string
 
 const (
 	JobCreated       JobStatus = "CREATED"
-	JobStarted       JobStatus = "STARTED"
+	JobInitialized   JobStatus = "INITIALIZED"
+	JobInProgress    JobStatus = "PROGRESS"
 	JobFailed        JobStatus = "FAILED"
 	JobPartiallyDone JobStatus = "PARTIALLY_DONE"
 	JobDone          JobStatus = "DONE"
@@ -93,12 +105,12 @@ const (
 
 // NewIngestionJob initiate a new job that will load events either
 // from an offline method or realtime
-func NewIngestionJob(config []byte) (*IngestionJob, error) {
+func NewIngestionJob(config []byte) (*IngestionJobConfiguration, error) {
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
 	}
-	ij := &IngestionJob{ID: id}
+	ij := &IngestionJobConfiguration{ID: id}
 	if err := json.Unmarshal(config, ij); err != nil {
 		return nil, err
 	}

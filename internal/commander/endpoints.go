@@ -52,6 +52,10 @@ func (c *Commander) DeleteTenant(ctx *fiber.Ctx) error {
 /*
 Ingestion Job routes
 */
+type CreateIngestionJobRequest struct {
+	model.IngestionJobConfiguration
+}
+
 func (c *Commander) GetJobs(ctx *fiber.Ctx) error {
 	return nil
 }
@@ -100,7 +104,7 @@ func (c *Commander) CreateSchema(ctx *fiber.Ctx) error {
 
 	// TODO: change this to a better Request struct
 	// we pass the body directly for now
-	if err := c.schemaManager.CreateSchema(ctx.Body()); err != nil {
+	if err := c.schemaManager.Execute(ctx.Body()); err != nil {
 		ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to create Schema",
 			"error":   err.Error(),

@@ -2,6 +2,6 @@ package manager
 
 type SystemManager interface {
 	Initialize() error
-	Start() error
+	Execute(config []byte) error
 	Shutdown() error
 }

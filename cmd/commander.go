@@ -32,7 +32,10 @@ func commanderRun(cmd *cobra.Command, args []string) {
 	logger.InitLogger(*config)
 
 	// initialize service
-	c := commander.New(*config)
+	c, err := commander.New(*config)
+	if err != nil {
+		panic(err.Error())
+	}
 
 	// signal channel to capture system calls
 	done := make(chan bool, 1)
@@ -50,6 +53,7 @@ func commanderRun(cmd *cobra.Command, args []string) {
 		}
 
 		// shutdown aqua service
+		// ...
 
 		log.Info().Msg("Commander Server is down. Bye Bye!")
 		close(done)

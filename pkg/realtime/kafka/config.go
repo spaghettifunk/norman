@@ -1,17 +1,4 @@
-package ingestion
-
-type StreamType string
-
-const (
-	StreamKafka   StreamType = "KAFKA"
-	StreamKinesis StreamType = "KINESIS"
-)
-
-type StreamIngestionConfiguration struct {
-	Type                 *StreamType           `json:"type"`
-	KafkaConfiguration   *KafkaConfiguration   `json:"kafka,omitempty"`
-	KinesisConfiguration *KinesisConfiguration `json:"kinesis,omitempty"`
-}
+package kafka
 
 type KafkaConfiguration struct {
 	// Brokers are the Kafka bootstrap brokers to connect to, as a comma separated list
@@ -34,8 +21,4 @@ type KafkaAuthentication struct {
 	SASLMechanism string `json:"saslmechanism,omitempty"`
 	Username      string `json:"username,omitempty"`
 	Password      string `json:"password,omitempty"`
-}
-
-type KinesisConfiguration struct {
-	Address string `json:"address,omitempty"`
 }

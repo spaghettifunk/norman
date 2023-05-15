@@ -8,15 +8,19 @@ import (
 	"os"
 
 	"github.com/fsnotify/fsnotify"
+	configuration "github.com/spaghettifunk/norman/internal/common"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
+var normanCfg *configuration.Configuration
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "norman",
-	Short: "A brief description of your application",
-	Long:  ``,
+	Use:               "norman",
+	Short:             "A brief description of your application",
+	PersistentPreRunE: setupConfiguration,
+	Long:              ``,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -28,7 +32,7 @@ func Execute() {
 	}
 }
 
-func init() {
+func setupConfiguration(cmd *cobra.Command, args []string) error {
 	viper.SetConfigName("config")
 	viper.SetConfigType("toml")
 	viper.AddConfigPath(".")
@@ -47,4 +51,11 @@ func init() {
 	})
 
 	viper.WatchConfig()
+
+	// fetch and validate configuration file
+	normanCfg = configuration.Fetch()
+	if err := normanCfg.Validate(); err != nil {
+		panic(err.Error())
+	}
+	return nil
 }

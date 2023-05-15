@@ -4,13 +4,13 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spaghettifunk/norman/internal/broker"
-	configuration "github.com/spaghettifunk/norman/internal/common"
 	"github.com/spaghettifunk/norman/pkg/logger"
 	"github.com/spf13/cobra"
 )
@@ -24,17 +24,15 @@ var brokerCmd = &cobra.Command{
 }
 
 func brokerRun(cmd *cobra.Command, args []string) {
-	// fetch and validate configuration file
-	config := configuration.Fetch()
-	if err := config.Validate(); err != nil {
-		panic(err.Error())
+	if normanCfg == nil {
+		panic(fmt.Errorf("configuration has not loaded correctly"))
 	}
 
 	// initialize global logging
-	logger.InitLogger(*config)
+	logger.InitLogger(*normanCfg)
 
 	// initialize service
-	c := broker.New(*config)
+	c := broker.New(*normanCfg)
 
 	// signal channel to capture system calls
 	done := make(chan bool, 1)

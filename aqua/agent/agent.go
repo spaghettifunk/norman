@@ -30,15 +30,13 @@ type Agent struct {
 }
 
 type Config struct {
+	DataDir         string   `toml:"data_dir" description:"Directory to store log and Raft data."`
+	NodeName        string   `toml:"node_name" description:"Unique server ID."`
+	BindAddr        string   `toml:"bind_addr" description:"Address where binding the server to"`
+	RPCPort         int      `toml:"rpc_port" description:"Port for RPC clients (and Raft) connections."`
+	StartJoinAddrs  []string `toml:"start_join_addrs" description:"Serf addresses to join."`
 	ServerTLSConfig *tls.Config
 	PeerTLSConfig   *tls.Config
-	DataDir         string
-	BindAddr        string
-	RPCPort         int
-	NodeName        string
-	StartJoinAddrs  []string
-	ACLModelFile    string
-	ACLPolicyFile   string
 }
 
 func (c Config) RPCAddr() (string, error) {

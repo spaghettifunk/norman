@@ -7,14 +7,6 @@ import (
 	"os"
 )
 
-type TLSConfig struct {
-	CertFile      string
-	KeyFile       string
-	CAFile        string
-	ServerAddress string
-	Server        bool
-}
-
 func SetupTLSConfig(cfg TLSConfig) (*tls.Config, error) {
 	var err error
 	tlsConfig := &tls.Config{}

@@ -4,7 +4,8 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	configuration "github.com/spaghettifunk/norman/internal/common"
+	"fmt"
+
 	storageserver "github.com/spaghettifunk/norman/internal/storage"
 	"github.com/spaghettifunk/norman/pkg/logger"
 	"github.com/spf13/cobra"
@@ -19,17 +20,15 @@ var storageCmd = &cobra.Command{
 }
 
 func storageRun(cmd *cobra.Command, args []string) {
-	// fetch and validate configuration file
-	config := configuration.Fetch()
-	if err := config.Validate(); err != nil {
-		panic(err.Error())
+	if normanCfg == nil {
+		panic(fmt.Errorf("configuration has not loaded correctly"))
 	}
 
 	// initialize global logging
-	logger.InitLogger(*config)
+	logger.InitLogger(*normanCfg)
 
 	// initialize service
-	_ = storageserver.New(*config)
+	_ = storageserver.New(*normanCfg)
 }
 
 func init() {

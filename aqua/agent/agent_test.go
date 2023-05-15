@@ -16,26 +16,33 @@ import (
 	"github.com/spaghettifunk/norman/aqua/agent"
 	"github.com/spaghettifunk/norman/aqua/config"
 	api "github.com/spaghettifunk/norman/aqua/proto/v1"
-	configuration "github.com/spaghettifunk/norman/internal/common"
 	"github.com/spaghettifunk/norman/pkg/dynaport"
 )
 
+type TLSConfig struct {
+	CertFile      string
+	KeyFile       string
+	CAFile        string
+	ServerAddress string
+	Server        bool
+}
+
 func TestAgent(t *testing.T) {
-	cfg := configuration.Fetch()
+	cfg := config.Fetch()
 
 	serverTLSConfig, err := config.SetupTLSConfig(config.TLSConfig{
-		CertFile:      fmt.Sprintf("%s%s", cfg.ConfigDir, cfg.Commander.Aqua.ServerCertFile),
-		KeyFile:       fmt.Sprintf("%s%s", cfg.ConfigDir, cfg.Commander.Aqua.ServerKeyFile),
-		CAFile:        fmt.Sprintf("%s%s", cfg.ConfigDir, cfg.Commander.Aqua.CAFile),
+		CertFile:      fmt.Sprintf("%s%s", cfg.ConfigDir, cfg.ServerTLSConfig.CertFile),
+		KeyFile:       fmt.Sprintf("%s%s", cfg.ConfigDir, cfg.ServerTLSConfig.KeyFile),
+		CAFile:        fmt.Sprintf("%s%s", cfg.ConfigDir, cfg.ServerTLSConfig.CAFile),
 		Server:        true,
 		ServerAddress: "127.0.0.1",
 	})
 	require.NoError(t, err)
 
 	peerTLSConfig, err := config.SetupTLSConfig(config.TLSConfig{
-		CertFile:      fmt.Sprintf("%s%s", cfg.ConfigDir, cfg.Commander.Aqua.RootClientCertFile),
-		KeyFile:       fmt.Sprintf("%s%s", cfg.ConfigDir, cfg.Commander.Aqua.RootClientKeyFile),
-		CAFile:        fmt.Sprintf("%s%s", cfg.ConfigDir, cfg.Commander.Aqua.CAFile),
+		CertFile:      fmt.Sprintf("%s%s", cfg.ConfigDir, cfg.PeerTLSConfig.CertFile),
+		KeyFile:       fmt.Sprintf("%s%s", cfg.ConfigDir, cfg.PeerTLSConfig.KeyFile),
+		CAFile:        fmt.Sprintf("%s%s", cfg.ConfigDir, cfg.PeerTLSConfig.CAFile),
 		Server:        false,
 		ServerAddress: "127.0.0.1",
 	})

@@ -8,7 +8,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spaghettifunk/norman/internal/commander"
-	configuration "github.com/spaghettifunk/norman/internal/common"
 	"github.com/spaghettifunk/norman/pkg/logger"
 	"github.com/spf13/cobra"
 )
@@ -22,17 +21,15 @@ var commanderCmd = &cobra.Command{
 }
 
 func commanderRun(cmd *cobra.Command, args []string) {
-	// fetch and validate configuration file
-	config := configuration.Fetch()
-	if err := config.Validate(); err != nil {
-		panic(err.Error())
+	if normanCfg == nil {
+		panic(fmt.Errorf("configuration has not loaded correctly"))
 	}
 
 	// initialize global logging
-	logger.InitLogger(*config)
+	logger.InitLogger(*normanCfg)
 
 	// initialize service
-	c, err := commander.New(*config)
+	c, err := commander.New(*normanCfg)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -66,7 +63,7 @@ func commanderRun(cmd *cobra.Command, args []string) {
 
 	// start http server goroutine
 	go func() {
-		addr := fmt.Sprintf("%s:%d", config.Commander.Address, config.Commander.Port)
+		addr := fmt.Sprintf("%s:%d", normanCfg.Commander.Address, normanCfg.Commander.Port)
 		if err := c.StartServer(addr); err != nil {
 			log.Fatal().Err(err)
 			close(done)

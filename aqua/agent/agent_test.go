@@ -13,9 +13,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/spaghettifunk/norman/internal/aqua/agent"
-	"github.com/spaghettifunk/norman/internal/aqua/config"
-	api "github.com/spaghettifunk/norman/internal/aqua/proto/v1"
+	"github.com/spaghettifunk/norman/aqua/agent"
+	"github.com/spaghettifunk/norman/aqua/config"
+	api "github.com/spaghettifunk/norman/aqua/proto/v1"
 	configuration "github.com/spaghettifunk/norman/internal/common"
 	"github.com/spaghettifunk/norman/pkg/dynaport"
 )

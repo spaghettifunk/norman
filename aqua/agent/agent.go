@@ -9,11 +9,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	server "github.com/spaghettifunk/norman/internal/aqua"
-	"github.com/spaghettifunk/norman/internal/aqua/discovery"
-	"github.com/spaghettifunk/norman/internal/aqua/log"
+	server "github.com/spaghettifunk/norman/aqua"
+	"github.com/spaghettifunk/norman/aqua/discovery"
+	"github.com/spaghettifunk/norman/aqua/log"
 
-	api "github.com/spaghettifunk/norman/internal/aqua/proto/v1"
+	api "github.com/spaghettifunk/norman/aqua/proto/v1"
 )
 
 type Agent struct {

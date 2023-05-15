@@ -6,7 +6,7 @@ import (
 	"os"
 	"path"
 
-	api "github.com/spaghettifunk/norman/internal/aqua/proto/v1"
+	api "github.com/spaghettifunk/norman/aqua/proto/v1"
 	"google.golang.org/protobuf/proto"
 )
 

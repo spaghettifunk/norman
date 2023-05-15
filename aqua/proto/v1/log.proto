@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package log.v1;
 
-option go_package = "github.com/spaghettifunk/norman/internal/aqua/proto/log_v1";
+option go_package = "github.com/spaghettifunk/norman/aqua/proto/log_v1";
 
 service Log {
   rpc Produce(ProduceRequest) returns (ProduceResponse) {}

@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/raft"
 	"github.com/stretchr/testify/require"
 
-	"github.com/spaghettifunk/norman/internal/aqua/log"
-	api "github.com/spaghettifunk/norman/internal/aqua/proto/v1"
+	"github.com/spaghettifunk/norman/aqua/log"
+	api "github.com/spaghettifunk/norman/aqua/proto/v1"
 	"github.com/spaghettifunk/norman/pkg/dynaport"
 )
 

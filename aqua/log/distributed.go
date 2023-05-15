@@ -16,7 +16,7 @@ import (
 
 	"github.com/hashicorp/raft"
 
-	api "github.com/spaghettifunk/norman/internal/aqua/proto/v1"
+	api "github.com/spaghettifunk/norman/aqua/proto/v1"
 )
 
 type DistributedLog struct {

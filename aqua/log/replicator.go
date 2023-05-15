@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 
-	api "github.com/spaghettifunk/norman/internal/aqua/proto/v1"
+	api "github.com/spaghettifunk/norman/aqua/proto/v1"
 )
 
 type Replicator struct {

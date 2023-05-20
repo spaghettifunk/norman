@@ -5,11 +5,16 @@ import (
 )
 
 type Configuration struct {
-	ConfigDir string     `toml:"config_dir"`
+	Consul    *consul    `toml:"consul"`
 	Commander *commander `toml:"commander"`
 	Broker    *broker    `toml:"broker"`
 	Storage   *storage   `toml:"storage"`
 	Logger    *logger    `toml:"logger"`
+}
+
+type consul struct {
+	Address string `toml:"address"`
+	Port    int    `toml:"port"`
 }
 
 type commander struct {
@@ -40,7 +45,10 @@ type logger struct {
 
 func Fetch() *Configuration {
 	return &Configuration{
-		ConfigDir: getStringOrDefault("config_dir", "/Users/davideberdin/Documents/github/norman/test/"),
+		Consul: &consul{
+			Address: getStringOrDefault("consul.address", "127.0.0.1"),
+			Port:    getIntOrDefault("consul.port", 8500),
+		},
 		Commander: &commander{
 			Address: getStringOrDefault("commander.address", "127.0.0.1"),
 			Port:    getIntOrDefault("commander.port", 8080),

@@ -1,16 +1,10 @@
 # Configuration file running Norman locally
 
 title = "Configuration for Norman"
-config_dir = "/Users/davideberdin/Documents/github/norman/test/"
 
-[aqua]
-cafile = "certs/ca.pem"
-server_cert_file = "certs/server.pem"
-server_key_file = "certs/server-key.pem"
-root_client_cert_file = "certs/root-client.pem"
-root_client_key_file = "certs/root-client-key.pem"
-nobody_client_cert_file = "certs/nobody-client.pem"
-nobody_client_key_file = "certs/nobody-client-key.pem"
+[consul]
+address = "127.0.0.1"
+port = 8500
 
 [commander]
 address = "127.0.0.1"
@@ -23,6 +17,7 @@ port = 8081
 [storage]
 address = "127.0.0.1"
 port = 8082
+
 
 [logger]
 level = "trace"

@@ -1,7 +1,11 @@
 package commander
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/goccy/go-json"
+	"github.com/google/uuid"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -9,10 +13,13 @@ import (
 	"github.com/rs/zerolog/log"
 	configuration "github.com/spaghettifunk/norman/internal/common"
 	"github.com/spaghettifunk/norman/internal/common/manager"
+	"github.com/spaghettifunk/norman/pkg/consul"
 )
 
 type Commander struct {
 	Name                string
+	ID                  uuid.UUID
+	consul              *consul.Consul
 	config              configuration.Configuration
 	app                 *fiber.App
 	schemaManager       *manager.SchemaManager
@@ -38,8 +45,20 @@ func New(config configuration.Configuration) (*Commander, error) {
 	// initialize job manager
 	ijb.Initialize()
 
+	// initialize consul client
+	cs := consul.New()
+	if err := cs.Init(); err != nil {
+		return nil, err
+	}
+
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return nil, err
+	}
 	c := &Commander{
 		Name:                "commander",
+		ID:                  id,
+		consul:              cs,
 		config:              config,
 		app:                 app,
 		schemaManager:       manager.NewSchemaManager(),
@@ -86,7 +105,17 @@ func (c *Commander) setupRoutes() {
 }
 
 func (c *Commander) StartServer(address string) error {
-	log.Info().Msg("Commander Server is ready to handle requests")
+	// register to consul
+	log.Info().Msg("register and declare Commander to Consul")
+	if err := c.consul.Start(c); err != nil {
+		return err
+	}
+	if err := c.consul.Declare(c); err != nil {
+		return err
+	}
+
+	// initialize api
+	log.Info().Msg("Commander server is ready to handle requests")
 	return c.app.Listen(address)
 }
 
@@ -100,6 +129,36 @@ func (c *Commander) ShutdownServer() error {
 		return err
 	}
 
+	// deregister to consul
+	log.Info().Msg("deregister Commander to Consul")
+	if err := c.consul.Stop(c); err != nil {
+		return err
+	}
+
 	log.Info().Msg("shutting down server...")
 	return c.app.Shutdown()
+}
+
+func (c *Commander) GetHost() string {
+	hn, err := os.Hostname()
+	if err != nil {
+		panic(err.Error())
+	}
+	return hn
+}
+
+func (c *Commander) GetPort() string {
+	return fmt.Sprint(c.config.Commander.Port)
+}
+
+func (c *Commander) GetName() string {
+	return c.Name
+}
+
+func (c *Commander) GetID() string {
+	return c.ID.String()
+}
+
+func (c *Commander) GetMetadata() map[string]string {
+	return nil
 }

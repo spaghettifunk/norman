@@ -48,17 +48,8 @@ func commanderRun(cmd *cobra.Command, args []string) {
 			log.Fatal().Err(err)
 			return
 		}
-
-		// shutdown aqua service
-		// ...
-
 		log.Info().Msg("Commander Server is down. Bye Bye!")
 		close(done)
-	}()
-
-	// start aqua service goroutine
-	go func() {
-
 	}()
 
 	// start http server goroutine

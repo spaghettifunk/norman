@@ -32,7 +32,10 @@ func brokerRun(cmd *cobra.Command, args []string) {
 	logger.InitLogger(*normanCfg)
 
 	// initialize service
-	c := broker.New(*normanCfg)
+	c, err := broker.New(*normanCfg)
+	if err != nil {
+		panic(err.Error())
+	}
 
 	// signal channel to capture system calls
 	done := make(chan bool, 1)
@@ -43,17 +46,19 @@ func brokerRun(cmd *cobra.Command, args []string) {
 	go func() {
 		// capture sigterm and other system call here
 		<-sigCh
+		// shutdown http server
 		if err := c.ShutdownServer(); err != nil {
 			log.Fatal().Err(err)
 			return
 		}
-		log.Info().Msg("Storage Server is down. Bye Bye!")
+		log.Info().Msg("Broker is down. Bye Bye!")
 		close(done)
 	}()
 
 	// start http server goroutine
 	go func() {
-		if err := c.StartServer(); err != nil {
+		addr := fmt.Sprintf("%s:%d", normanCfg.Broker.Address, normanCfg.Broker.Port)
+		if err := c.StartServer(addr); err != nil {
 			log.Fatal().Err(err)
 			close(done)
 		}

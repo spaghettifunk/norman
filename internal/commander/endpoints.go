@@ -54,7 +54,7 @@ func (c *Commander) DeleteTenant(ctx *fiber.Ctx) error {
 Ingestion Job routes
 */
 type CreateIngestionJobRequest struct {
-	ingestion.IngestionJobConfiguration
+	Job ingestion.IngestionJobConfiguration `json:"job"`
 }
 
 func (c *Commander) GetJobs(ctx *fiber.Ctx) error {
@@ -66,6 +66,23 @@ func (c *Commander) GetJob(ctx *fiber.Ctx) error {
 }
 
 func (c *Commander) CreateJob(ctx *fiber.Ctx) error {
+	payload := &CreateIngestionJobRequest{}
+	if err := ctx.BodyParser(&payload); err != nil {
+		return err
+	}
+
+	if err := c.ingestionJobManager.Execute(&payload.Job); err != nil {
+		ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to create ingestion job",
+			"error":   err.Error(),
+		})
+		return err
+	}
+	ctx.Status(http.StatusOK).JSON(fiber.Map{
+		"message":   "Ingestion job created successfully",
+		"timestamp": time.Now().Format("2006-01-02 15:04:05"),
+	})
+
 	return nil
 }
 
@@ -85,7 +102,7 @@ func (c *Commander) DeleteJob(ctx *fiber.Ctx) error {
 Schema routes
 */
 type CreateSchemaRequest struct {
-	schema.Schema
+	Schema schema.Schema `json:"schema"`
 }
 
 func (c *Commander) GetSchemas(ctx *fiber.Ctx) error {
@@ -97,15 +114,12 @@ func (c *Commander) GetSchema(ctx *fiber.Ctx) error {
 }
 
 func (c *Commander) CreateSchema(ctx *fiber.Ctx) error {
-	// Validate the body payload -- a bit useless for now
 	payload := &CreateSchemaRequest{}
 	if err := ctx.BodyParser(&payload); err != nil {
-		return err
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	// TODO: change this to a better Request struct
-	// we pass the body directly for now
-	if err := c.schemaManager.Execute(ctx.Body()); err != nil {
+	if err := c.schemaManager.Execute(&payload.Schema); err != nil {
 		ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to create Schema",
 			"error":   err.Error(),

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	common_ingestion "github.com/spaghettifunk/norman/internal/common/ingestion"
 	"github.com/spaghettifunk/norman/internal/common/schema"
@@ -19,21 +20,26 @@ type Ingestion interface {
 }
 
 type Job struct {
-	Client        Ingestion
-	Configuration *common_ingestion.IngestionJobConfiguration
-	JobStatus     common_ingestion.JobStatus
-	wg            *sync.WaitGroup
+	ID              uuid.UUID
+	IngestionClient Ingestion
+	Configuration   *common_ingestion.IngestionJobConfiguration
+	JobStatus       common_ingestion.JobStatus
+	wg              *sync.WaitGroup
 }
 
 // NewJob creates a new Job based on the configuration in input
-func NewJob(cfg *common_ingestion.IngestionJobConfiguration) (*Job, error) {
-	// call Aqua to get the schema
-	sc, err := fetchSchema(cfg.SegmentConfiguration.SchemaName)
+func NewJob(cfg *common_ingestion.IngestionJobConfiguration, schema *schema.Schema) (*Job, error) {
+	// new segment manager
+	sm, err := segment.NewSegmentManager(schema)
 	if err != nil {
 		return nil, err
 	}
-	// new segment manager
-	sm := segment.NewSegmentManager(sc)
+
+	// UUID of the job
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return nil, err
+	}
 
 	// get the correct client based on ingestion type
 	var client Ingestion
@@ -51,22 +57,17 @@ func NewJob(cfg *common_ingestion.IngestionJobConfiguration) (*Job, error) {
 	}
 	// create new job
 	return &Job{
-		Client:        client,
-		Configuration: cfg,
-		JobStatus:     common_ingestion.JobCreated,
+		ID:              id,
+		IngestionClient: client,
+		Configuration:   cfg,
+		JobStatus:       common_ingestion.JobCreated,
 	}, nil
-}
-
-// fetchSchema returns the Schema object from Acqua based on its name
-// if the schema is not found, return an error
-func fetchSchema(schemaName string) (*schema.Schema, error) {
-	return &schema.Schema{}, nil
 }
 
 // Initialize initiate the client and prepare for data reading process
 func (j *Job) Initialize() error {
 	j.JobStatus = common_ingestion.JobInitialized
-	return j.Client.Initialize()
+	return j.IngestionClient.Initialize()
 }
 
 // Shutdown terminate the process of data incoming
@@ -76,13 +77,13 @@ func (j *Job) Shutdown(failure bool) error {
 	} else {
 		j.JobStatus = common_ingestion.JobDone
 	}
-	return j.Client.Shutdown(failure)
+	return j.IngestionClient.Shutdown(failure)
 }
 
 func (j *Job) Execute() error {
 	defer j.wg.Done()
 	j.JobStatus = common_ingestion.JobInProgress
-	return j.Client.GetEvents()
+	return j.IngestionClient.GetEvents()
 }
 
 func (j *Job) OnFailure(e error) {

@@ -1,7 +1,6 @@
 package ingestion
 
 import (
-	"github.com/goccy/go-json"
 	"github.com/google/uuid"
 	"github.com/spaghettifunk/norman/pkg/realtime/kafka"
 	"github.com/spaghettifunk/norman/pkg/realtime/kinesis"
@@ -26,7 +25,7 @@ type IngestionJobConfiguration struct {
 	IndexConfiguration     *indexConfiguration     `json:"indexConfiguration,omitempty"`
 	TenantConfiguration    *tenantConfiguration    `json:"tenantConfiguration,omitempty"`
 	Metadata               map[string]interface{}  `json:"metadata,omitempty"`
-	IngestionConfiguration *ingestionConfiguration `json:"ingestionConfiguration,omitempty"`
+	IngestionConfiguration *ingestionConfiguration `json:"ingestionConfiguration"`
 	SegmentConfiguration   *segmentConfiguration   `json:"segmentConfiguration"`
 }
 
@@ -58,11 +57,11 @@ type ingestionConfiguration struct {
 		Function   string `json:"function,omitempty"`
 	} `json:"transformConfigurations,omitempty"`
 	Offline struct {
-	} `json:"offline"`
+	} `json:"offline,omitempty"`
 	Realtime struct {
 		KafkaConfiguration   *kafka.KafkaConfiguration     `json:"kafka,omitempty"`
 		KinesisConfiguration *kinesis.KinesisConfiguration `json:"kinesis,omitempty"`
-	} `json:"realtime"`
+	} `json:"realtime,omitempty"`
 }
 
 // indexConfiguration is used to set the way the data is indexed in the Storage
@@ -105,14 +104,11 @@ const (
 
 // NewIngestionJob initiate a new job that will load events either
 // from an offline method or realtime
-func NewIngestionJob(config []byte) (*IngestionJobConfiguration, error) {
+func NewIngestionJob(ij *IngestionJobConfiguration) error {
 	id, err := uuid.NewUUID()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	ij := &IngestionJobConfiguration{ID: id}
-	if err := json.Unmarshal(config, ij); err != nil {
-		return nil, err
-	}
-	return ij, nil
+	ij.ID = id
+	return nil
 }

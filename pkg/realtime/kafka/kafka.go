@@ -73,12 +73,11 @@ func createConfiguration(kcfg *KafkaConfiguration) *sarama.Config {
 	switch kcfg.Assignor {
 	case "sticky":
 		cfg.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.NewBalanceStrategySticky()}
-	case "roundrobin":
-		cfg.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.NewBalanceStrategyRoundRobin()}
 	case "range":
 		cfg.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.NewBalanceStrategyRange()}
+	case "roundrobin":
 	default:
-		log.Panic().Msgf("Unrecognized consumer group partition assignor: %s", kcfg.Assignor)
+		cfg.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.NewBalanceStrategyRoundRobin()}
 	}
 
 	if kcfg.InitialOffset == "oldest" {
@@ -197,6 +196,7 @@ func (k *KafkaIngestor) ConsumeClaim(session sarama.ConsumerGroupSession, claim 
 	for {
 		select {
 		case message := <-claim.Messages():
+			log.Debug().Msg(string(message.Value))
 			k.segmentManager.InsertRowInSegment(message.Value)
 
 			if k.segmentManager.GetSegmentLength() > MaxBatchedEventsPerSegment {

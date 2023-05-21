@@ -1,0 +1,20 @@
+{
+  "job": {
+    "name": "transcript_job",
+    "type": "KAFKA",
+    "ingestionConfiguration": {
+      "realtime": {
+        "kafka": {
+          "brokers": "localhost:9092",
+          "topic": "test-events",
+          "offset": "oldest"
+        }
+      }
+    },
+    "segmentConfiguration": {
+      "schemaName": "transcript",
+      "timeColumnName": "",
+      "timeType": ""
+    }
+  }
+}

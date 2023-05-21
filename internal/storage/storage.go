@@ -14,8 +14,7 @@ type StorageServer struct {
 	Name   string
 	ID     uuid.UUID
 	consul *consul.Consul
-	config configuration.Configuration
-	// gRPC server to receive requests from Commander
+	config configuration.Configuration	
 }
 
 func New(config configuration.Configuration) (*StorageServer, error) {

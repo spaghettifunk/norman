@@ -37,19 +37,19 @@ func New(config configuration.Configuration) (*Commander, error) {
 	// add default middleware
 	app.Use(recover.New())
 
-	// Create the new job manager
-	ijb, err := manager.NewIngestionJobManager()
-	if err != nil {
-		return nil, err
-	}
-	// initialize job manager
-	ijb.Initialize()
-
 	// initialize consul client
 	cs := consul.New()
 	if err := cs.Init(); err != nil {
 		return nil, err
 	}
+
+	// Create the new job manager
+	ijb, err := manager.NewIngestionJobManager(cs)
+	if err != nil {
+		return nil, err
+	}
+	// initialize job manager
+	ijb.Initialize()
 
 	id, err := uuid.NewUUID()
 	if err != nil {
@@ -61,7 +61,7 @@ func New(config configuration.Configuration) (*Commander, error) {
 		consul:              cs,
 		config:              config,
 		app:                 app,
-		schemaManager:       manager.NewSchemaManager(),
+		schemaManager:       manager.NewSchemaManager(cs),
 		ingestionJobManager: ijb,
 	}
 

@@ -2,11 +2,11 @@ package kafka
 
 type KafkaConfiguration struct {
 	// Brokers are the Kafka bootstrap brokers to connect to, as a comma separated list
-	Brokers string `json:"brokers,omitempty"`
+	Brokers string `json:"brokers"`
 	// Topic is the Kafka topic to be consumed
-	Topic string `json:"topic,omitempty"`
+	Topic string `json:"topic"`
 	// ConsumerGroup is the Kafka consumer group definition
-	ConsumerGroup string `json:"consumerGroup,omitempty"`
+	ConsumerGroup string `json:"consumerGroup"`
 	// Kafka cluster version
 	Version string `json:"version,omitempty"`
 	// Assignor is the Consumer group partition assignment strategy (range, roundrobin, sticky)

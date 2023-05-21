@@ -5,14 +5,6 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Aqua",
-      "type": "go",
-      "request": "launch",
-      "mode": "auto",
-      "program": "${workspaceFolder}/main.go",
-      "args": ["aqua"]
-    },
-    {
       "name": "Commander",
       "type": "go",
       "request": "launch",

@@ -3,7 +3,6 @@ package segment
 import (
 	"fmt"
 	"os"
-	"path"
 	"time"
 
 	"github.com/spaghettifunk/norman/internal/common/schema"
@@ -12,25 +11,20 @@ import (
 type SegmentManager struct {
 	segment *Segment
 	schema  *schema.Schema
-	// Aqua gRPC client
 }
 
-func NewSegmentManager(schema *schema.Schema) *SegmentManager {
+func NewSegmentManager(schema *schema.Schema) (*SegmentManager, error) {
 	return &SegmentManager{
 		schema: schema,
-	}
+	}, nil
 }
 
 func (sm *SegmentManager) CreateNewSegment() error {
 	// get directory where to store the segment from Aqua
-	dir := fmt.Sprintf("/tmp/%s_%s", time.Now().Format("2023-05-01T10:00:00"), sm.schema.Name)
+	f := fmt.Sprintf("./output/%s_%s.segment", time.Now().Format("2023-05-01T10:00:00"), sm.schema.Name)
 
 	var err error
-	segmentFile, err := os.OpenFile(
-		path.Join(dir, ".segment"),
-		os.O_RDWR|os.O_CREATE|os.O_APPEND,
-		0644,
-	)
+	segmentFile, err := os.OpenFile(f, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return err
 	}

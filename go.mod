@@ -22,6 +22,8 @@ require (
 	github.com/aws/aws-sdk-go v1.44.261 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/boltdb/bolt v1.3.1 // indirect
+	github.com/bytedance/sonic v1.8.9 // indirect
+	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/cloudflare/cfssl v1.6.4 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/eapache/go-resiliency v1.3.0 // indirect
@@ -73,6 +75,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/kisielk/sqlstruct v0.0.0-20201105191214-5f3e10d3ab46 // indirect
 	github.com/klauspost/compress v1.16.5 // indirect
+	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/lib/pq v1.10.1 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
@@ -106,6 +109,7 @@ require (
 	github.com/swaggo/files/v2 v2.0.0 // indirect
 	github.com/swaggo/swag v1.16.1 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
+	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/urfave/cli/v2 v2.25.3 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.47.0 // indirect
@@ -114,6 +118,7 @@ require (
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/zmap/zcrypto v0.0.0-20210511125630-18f1e0152cfc // indirect
 	github.com/zmap/zlint/v3 v3.1.0 // indirect
+	golang.org/x/arch v0.0.0-20210923205945-b76863e36670 // indirect
 	golang.org/x/crypto v0.8.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.9.0 // indirect

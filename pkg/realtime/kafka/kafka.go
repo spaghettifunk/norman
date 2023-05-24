@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spaghettifunk/norman/internal/storage/segment"
@@ -22,7 +21,7 @@ var (
 	// FlushIntervalInSec is the amount of time before executing the Flush operation in case the buffer is not full
 	FlushIntervalInSec = 10
 	// MaxBatchedEvents is the maximum amount of events in a segment
-	MaxBatchedEventsPerSegment = 100000
+	// MaxBatchedEventsPerSegment = 1000000
 )
 
 type KafkaIngestor struct {
@@ -182,46 +181,38 @@ func (k *KafkaIngestor) Cleanup(sarama.ConsumerGroupSession) error {
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 func (k *KafkaIngestor) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	var fflush time.Time
+	// var fflush time.Time
 	if err := k.segmentManager.CreateNewSegment(); err != nil {
 		return err
 	}
 
-	// TODO: the FlushIntervalInSec should be coming from the Job Ingestion Configuration
 	// Replace this with the Granularity of the segment
-	flushInterval := time.Duration(FlushIntervalInSec) * time.Second
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	// flushInterval := time.Duration(FlushIntervalInSec) * time.Second
+	// ticker := time.NewTicker(time.Second)
+	// defer ticker.Stop()
 
 	for {
 		select {
 		case message := <-claim.Messages():
 			log.Debug().Msg(string(message.Value))
-			k.segmentManager.InsertRowInSegment(message.Value)
-
-			if k.segmentManager.GetSegmentLength() > MaxBatchedEventsPerSegment {
-				// Flush Segment
-				// TODO: dir should come from Commander/Aqua
-				if err := k.segmentManager.FlushSegment(); err != nil {
-					log.Panic().Err(err).Msg("error in flushing the segment")
-				}
+			if err := k.segmentManager.InsertDataInSegment(message.Value); err != nil {
+				log.Error().Err(err).Msg("error in inserting data in segment")
 			}
 			session.MarkMessage(message, "")
-		case <-ticker.C:
-			// Refresh pipe
-			tt := time.Now()
-			if tt.After(fflush) {
-				log.Debug().Msg("Force flush (interval) triggered")
+		// case <-ticker.C:
+		// 	// Refresh pipe
+		// 	tt := time.Now()
+		// 	if tt.After(fflush) {
+		// 		log.Debug().Msg("Force flush (interval) triggered")
 
-				// Flush Segment
-				// TODO: dir should come from Commander/Aqua
-				if err := k.segmentManager.FlushSegment(); err != nil {
-					log.Panic().Err(err).Msg("error in flushing the segment")
-				}
+		// 		// Flush Segment
+		// 		if err := k.segmentManager.FlushSegment(); err != nil {
+		// 			log.Panic().Err(err).Msg("error in flushing the segment")
+		// 		}
 
-				fflush = tt.Add(flushInterval)
-				log.Debug().Msg("Force flush (interval) finished")
-			}
+		// 		fflush = tt.Add(flushInterval)
+		// 		log.Debug().Msg("Force flush (interval) finished")
+		// 	}
 		case <-session.Context().Done():
 			return nil
 		}

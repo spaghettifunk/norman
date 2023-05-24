@@ -3,32 +3,53 @@ package segment
 import (
 	"fmt"
 	"os"
-	"time"
+
+	"encoding/json"
+
+	"github.com/bytedance/sonic"
 
 	"github.com/spaghettifunk/norman/internal/common/schema"
+	"github.com/spaghettifunk/norman/internal/common/types"
+	"github.com/spaghettifunk/norman/pkg/dynamicstruct"
+)
+
+const (
+	MaxNumberOfEntriesPerSegment = 3
 )
 
 type SegmentManager struct {
-	segment *Segment
-	schema  *schema.Schema
+	segment     *Segment
+	schema      *schema.Schema
+	eventStruct interface{}
+	eventReader dynamicstruct.Reader
+	baseDir     string
 }
 
 func NewSegmentManager(schema *schema.Schema) (*SegmentManager, error) {
+	es := createEventStruct(schema)
+	er := dynamicstruct.NewReader(es)
+
+	path, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	baseDir := fmt.Sprintf("%s/output/default/%s/", path, schema.Name)
+	if err := os.MkdirAll(baseDir, os.ModePerm); err != nil {
+		return nil, err
+	}
+
 	return &SegmentManager{
 		schema: schema,
+		// Format: output/{tenantID}/{schemaName}
+		baseDir:     baseDir,
+		eventStruct: es,
+		eventReader: er,
 	}, nil
 }
 
 func (sm *SegmentManager) CreateNewSegment() error {
-	// get directory where to store the segment from Aqua
-	f := fmt.Sprintf("./output/%s_%s.segment", time.Now().Format("2023-05-01T10:00:00"), sm.schema.Name)
-
-	var err error
-	segmentFile, err := os.OpenFile(f, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		return err
-	}
-	s, err := NewSegment(segmentFile)
+	s, err := NewSegment(sm.baseDir, sm.schema)
 	if err != nil {
 		return err
 	}
@@ -36,23 +57,72 @@ func (sm *SegmentManager) CreateNewSegment() error {
 	return nil
 }
 
-func (sm *SegmentManager) InsertRowInSegment(values []byte) error {
-	err := sm.validateEvent(values)
-	if err != nil {
-		return nil
+func (sm *SegmentManager) InsertDataInSegment(values []byte) error {
+	// validate if the incoming message is a JSON -- only type supported
+	if !sm.isJSON(values) {
+		return fmt.Errorf("invalid JSON event")
 	}
-	// add to segment here
-	// ....
-
+	// transform values into a map[]
+	if err := sonic.Unmarshal(values, &sm.eventStruct); err != nil {
+		return err
+	}
+	// validate if event is according to the schema
+	if err := sm.validateEvent(); err != nil {
+		return err
+	}
+	// add data to segment
+	if err := sm.insertData(); err != nil {
+		return err
+	}
+	// check if reached maximum segment size, flush otherwise
+	if sm.segment.GetLength(sm.schema.DimensionFieldSpecs[0].Name) > MaxNumberOfEntriesPerSegment {
+		return sm.FlushSegment()
+	}
 	return nil
 }
 
-func (sm *SegmentManager) validateEvent(values []byte) error {
+func createEventStruct(schema *schema.Schema) interface{} {
+	es := dynamicstruct.NewStruct()
+
+	for _, dimension := range schema.DimensionFieldSpecs {
+		ty := types.GetDataType(dimension.Name, dimension.DataType)
+		es.AddField(dimension.Name, ty.Typ, ty.Tag)
+	}
+
+	for _, metric := range schema.MetricFieldSpecs {
+		ty := types.GetDataType(metric.Name, metric.DataType)
+		es.AddField(metric.Name, ty.Typ, ty.Tag)
+	}
+
+	for _, dt := range schema.DateTimeFieldSpecs {
+		ty := types.GetDataType(dt.Name, dt.DataType)
+		es.AddField(dt.Name, ty.Typ, ty.Tag)
+	}
+
+	return es.Build().New()
+}
+
+func (sm *SegmentManager) insertData() error {
+	for _, f := range sm.eventReader.GetAllFields() {
+		if err := sm.segment.InsertData(f.Name(), f.Interface()); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (sm *SegmentManager) GetSegmentLength() int {
-	return 0
+// TODO: super hard. Not sure how to solve it
+func (sm *SegmentManager) validateEvent() error {
+	return nil
+}
+
+func (sm *SegmentManager) isJSON(str []byte) bool {
+	var js json.RawMessage
+	return sonic.Unmarshal(str, &js) == nil
+}
+
+func (sm *SegmentManager) GetSegmentLength(column string) int {
+	return sm.segment.GetLength(column)
 }
 
 // FlushSegment first persist on disk the current segment
@@ -66,5 +136,7 @@ func (sm *SegmentManager) FlushSegment() error {
 }
 
 func (sm *SegmentManager) compressSegment() error {
+	// zip compression
+	// ...
 	return nil
 }

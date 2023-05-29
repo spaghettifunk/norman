@@ -1,63 +1,74 @@
 package segment
 
 import (
+	"fmt"
+	"path"
+	"sync"
 	"sync/atomic"
 
+	"github.com/apache/arrow/go/arrow"
+	"github.com/apache/arrow/go/arrow/array"
+	"github.com/apache/arrow/go/arrow/memory"
 	"github.com/google/uuid"
-	"github.com/spaghettifunk/norman/internal/common/schema"
-	"github.com/spaghettifunk/norman/internal/common/types"
+	"github.com/xitongsys/parquet-go/source"
+	"github.com/xitongsys/parquet-go/writer"
 )
 
 type Segment struct {
-	ID         uuid.UUID `json:"-"`
-	MapColumns map[string]*Column
+	ID uuid.UUID `json:"-"`
 	// count the inserted events
 	counter uint32
+	mu      sync.Mutex
+	pFile   source.ParquetFile
+	schema  *arrow.Schema
+	builder *array.RecordBuilder
+	writer  *writer.ArrowWriter
 }
 
-func NewSegment(dir string, s *schema.Schema) (*Segment, error) {
+func NewSegment(dir string, schema *arrow.Schema) (*Segment, error) {
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
 	}
 
-	segment := &Segment{
-		ID:         id,
-		MapColumns: map[string]*Column{},
+	// create a parquet file
+	fileName := path.Join(dir, fmt.Sprintf("%s.parquet", id.String()))
+	pFile, err := newLocalParquetWrite(fileName)
+	if err != nil {
+		return nil, err
 	}
 
-	for _, dimension := range s.DimensionFieldSpecs {
-		col, err := NewColumn(dir, dimension.Name, types.DimensionType, types.GetDataType(dimension.Name, dimension.DataType))
-		if err != nil {
-			return nil, err
-		}
-		segment.MapColumns[dimension.Name] = col
+	// create the apache arrow writer
+	w, err := writer.NewArrowWriter(schema, pFile, 1)
+	if err != nil {
+		return nil, err
 	}
 
-	for _, metric := range s.MetricFieldSpecs {
-		col, err := NewColumn(dir, metric.Name, types.MetricType, types.GetDataType(metric.Name, metric.DataType))
-		if err != nil {
-			return nil, err
-		}
-		segment.MapColumns[metric.Name] = col
-	}
+	// create the new record builder for inserting data to arrow file
+	mem := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	b := array.NewRecordBuilder(mem, schema)
 
-	for _, dt := range s.DateTimeFieldSpecs {
-		col, err := NewColumn(dir, dt.Name, types.TimeType, types.GetDataType(dt.Name, dt.DataType))
-		if err != nil {
-			return nil, err
-		}
-		segment.MapColumns[dt.Name] = col
-	}
-
-	return segment, nil
+	return &Segment{
+		ID:      id,
+		schema:  schema,
+		mu:      sync.Mutex{},
+		pFile:   pFile,
+		builder: b,
+		writer:  w,
+	}, nil
 }
 
-func (s *Segment) InsertData(column string, val interface{}) error {
-	_, _, err := s.MapColumns[column].InsertData(val)
+func (s *Segment) InsertData(data []byte) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// insert data to arrow here
+	
+	s.builder.Field(0)
+
 	// increase counter
 	atomic.AddUint32(&s.counter, 1)
-	return err
+	return nil
 }
 
 func (s *Segment) GetLength(colName string) int {
@@ -66,11 +77,21 @@ func (s *Segment) GetLength(colName string) int {
 
 // Flush persist the segment on disk
 func (s *Segment) Flush() error {
-	for _, col := range s.MapColumns {
-		if err := col.Flush(); err != nil {
-			return err
-		}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// write arrow file
+	defer s.builder.Release()
+	rec := s.builder.NewRecord()
+	if err := s.writer.WriteArrow(rec); err != nil {
+		return err
 	}
+
+	// store the parquet file
+	if err := s.pFile.Close(); err != nil {
+		return nil
+	}
+
 	// reset counter now that we flushed data to disk
 	atomic.SwapUint32(&s.counter, 0)
 	return nil

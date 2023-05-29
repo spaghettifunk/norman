@@ -8,8 +8,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/spaghettifunk/norman/internal/common/ingestion"
-	"github.com/spaghettifunk/norman/internal/common/schema"
+	"github.com/spaghettifunk/norman/internal/common/entities"
+	cingestion "github.com/spaghettifunk/norman/internal/common/ingestion"
+
 	"github.com/spaghettifunk/norman/internal/service"
 )
 
@@ -20,8 +21,8 @@ var (
 	ServicesKVpath string = "services"
 	// Where the JobsKVPath resides
 	JobsKVPath string = "ingestion-jobs"
-	// Where the JobsKVPath resides
-	SchemasKVPath string = "schemas"
+	// Where the TablesKVPath resides
+	TablesKVPath string = "tables"
 	// Config falls back to client default config
 	ConsulConfig *api.Config = api.DefaultConfig()
 )
@@ -107,13 +108,13 @@ func (c *Consul) Declare(s service.Service) error {
 	return err
 }
 
-// Store the consul schema configuration
-func (c *Consul) PutSchemaConfiguration(schema *schema.Schema) error {
-	js, err := json.Marshal(schema)
+// Store the consul table configuration
+func (c *Consul) PutTableConfiguration(table *entities.Table) error {
+	js, err := json.Marshal(table)
 	if err != nil {
 		return err
 	}
-	key := formattedSchemaKey(schema.Name)
+	key := formattedTableKey(table.Name)
 	pair := api.KVPair{
 		Key:   key,
 		Flags: 0,
@@ -123,15 +124,15 @@ func (c *Consul) PutSchemaConfiguration(schema *schema.Schema) error {
 	return err
 }
 
-// Retrieve the consul schema configuration
-func (c *Consul) GetSchemaConfiguration(name string) (*schema.Schema, error) {
-	key := formattedSchemaKey(name)
+// Retrieve the consul table configuration
+func (c *Consul) GetTableConfiguration(name string) (*entities.Table, error) {
+	key := formattedTableKey(name)
 	qo := api.QueryOptions{}
 	v, _, err := c.KV.Get(key, &qo)
 	if err != nil {
 		return nil, err
 	}
-	cfg := &schema.Schema{}
+	cfg := &entities.Table{}
 	if err := json.Unmarshal(v.Value, cfg); err != nil {
 		return nil, err
 	}
@@ -139,7 +140,7 @@ func (c *Consul) GetSchemaConfiguration(name string) (*schema.Schema, error) {
 }
 
 // Store the consul ingestion job status
-func (c *Consul) PutIngestionJobStatus(id string, status ingestion.JobStatus) error {
+func (c *Consul) PutIngestionJobStatus(id string, status cingestion.JobStatus) error {
 	key := formattedJobKey(id)
 	pair := api.KVPair{
 		Key:   key,
@@ -151,14 +152,14 @@ func (c *Consul) PutIngestionJobStatus(id string, status ingestion.JobStatus) er
 }
 
 // Retrieve the consul ingestion job status
-func (c *Consul) GetIngestionJobStatus(id string) (ingestion.JobStatus, error) {
+func (c *Consul) GetIngestionJobStatus(id string) (cingestion.JobStatus, error) {
 	key := formattedJobKey(id)
 	qo := api.QueryOptions{}
 	v, _, err := c.KV.Get(key, &qo)
 	if err != nil {
 		return "", err
 	}
-	var status *ingestion.JobStatus
+	var status *cingestion.JobStatus
 	if err := json.Unmarshal(v.Value, &status); err != nil {
 		return "", err
 	}
@@ -187,11 +188,11 @@ func formattedKey(s service.Service) string {
 	return fmt.Sprintf("%v/%v/%v/definition", ServicesKVpath, s.GetName(), s.GetID())
 }
 
-// formattedSchemaKey returns correctly formatted key of the schema
+// formattedTableKey returns correctly formatted key of the table
 // TODO: how do we get the tenant name?
-func formattedSchemaKey(name string) string {
-	// Format: schemas/{tenantId}/schemaName/definition
-	return fmt.Sprintf("%v/%v/%v/definition", SchemasKVPath, "default", name)
+func formattedTableKey(name string) string {
+	// Format: tables/{tenantId}/tableName/definition
+	return fmt.Sprintf("%v/%v/%v/definition", TablesKVPath, "default", name)
 }
 
 // formattedJobKey returns correctly formatted key of the job

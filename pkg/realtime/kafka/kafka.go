@@ -10,7 +10,7 @@ import (
 	"syscall"
 
 	"github.com/rs/zerolog/log"
-	"github.com/spaghettifunk/norman/internal/storage/segment"
+	"github.com/spaghettifunk/norman/internal/storage/manager"
 
 	"github.com/Shopify/sarama"
 )
@@ -31,7 +31,7 @@ type KafkaIngestor struct {
 	Brokers  []string
 
 	// below are used to validate and process each segment
-	segmentManager *segment.SegmentManager
+	tableManager *manager.TableManager
 
 	// below are used for consuming messages
 	ready  chan bool
@@ -40,7 +40,7 @@ type KafkaIngestor struct {
 	cancel context.CancelFunc
 }
 
-func NewIngestor(kcfg *KafkaConfiguration, sm *segment.SegmentManager) (*KafkaIngestor, error) {
+func NewIngestor(kcfg *KafkaConfiguration, manager *manager.TableManager) (*KafkaIngestor, error) {
 	bs := strings.Split(kcfg.Brokers, ",")
 
 	cfg := createConfiguration(kcfg)
@@ -51,14 +51,14 @@ func NewIngestor(kcfg *KafkaConfiguration, sm *segment.SegmentManager) (*KafkaIn
 
 	ctx, cancel := context.WithCancel(context.Background())
 	return &KafkaIngestor{
-		Consumer:       consumer,
-		Topic:          kcfg.Topic,
-		Brokers:        bs,
-		segmentManager: sm,
-		ready:          make(chan bool),
-		wg:             &sync.WaitGroup{},
-		ctx:            ctx,
-		cancel:         cancel,
+		Consumer:     consumer,
+		Topic:        kcfg.Topic,
+		Brokers:      bs,
+		tableManager: manager,
+		ready:        make(chan bool),
+		wg:           &sync.WaitGroup{},
+		ctx:          ctx,
+		cancel:       cancel,
 	}, nil
 }
 
@@ -182,7 +182,7 @@ func (k *KafkaIngestor) Cleanup(sarama.ConsumerGroupSession) error {
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 func (k *KafkaIngestor) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	// var fflush time.Time
-	if err := k.segmentManager.CreateNewSegment(); err != nil {
+	if err := k.tableManager.CreateNewSegment(); err != nil {
 		return err
 	}
 
@@ -195,7 +195,7 @@ func (k *KafkaIngestor) ConsumeClaim(session sarama.ConsumerGroupSession, claim 
 		select {
 		case message := <-claim.Messages():
 			log.Debug().Msg(string(message.Value))
-			if err := k.segmentManager.InsertDataInSegment(message.Value); err != nil {
+			if err := k.tableManager.InsertData(message.Value); err != nil {
 				log.Error().Err(err).Msg("error in inserting data in segment")
 			}
 			session.MarkMessage(message, "")

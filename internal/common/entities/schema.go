@@ -1,7 +1,7 @@
 package entities
 
 import (
-	"github.com/apache/arrow/go/arrow"
+	"github.com/apache/arrow/go/v12/arrow"
 	"github.com/spaghettifunk/norman/internal/common/types"
 )
 

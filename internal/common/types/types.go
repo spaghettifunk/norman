@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/apache/arrow/go/arrow"
+	"github.com/apache/arrow/go/v12/arrow"
 )
 
 const (
@@ -56,7 +56,7 @@ func GetDataType(tn string) DataType {
 	case Bytes:
 		return newDataType(tn, true, true, arrow.BinaryTypes.Binary)
 	case Map:
-		return newDataType(tn, false, false, &arrow.MapType{})
+		return newDataType(tn, false, false, &arrow.StructType{})
 	case List:
 		return newDataType(tn, false, true, &arrow.ListType{})
 	default:

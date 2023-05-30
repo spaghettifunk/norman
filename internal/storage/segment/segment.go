@@ -6,23 +6,26 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/apache/arrow/go/arrow"
-	"github.com/apache/arrow/go/arrow/array"
-	"github.com/apache/arrow/go/arrow/memory"
+	"github.com/apache/arrow/go/v12/arrow"
+	"github.com/apache/arrow/go/v12/arrow/array"
+	"github.com/apache/arrow/go/v12/arrow/memory"
+
+	"github.com/apache/arrow/go/v12/parquet"
+	"github.com/apache/arrow/go/v12/parquet/pqarrow"
+
 	"github.com/google/uuid"
-	"github.com/xitongsys/parquet-go/source"
-	"github.com/xitongsys/parquet-go/writer"
 )
 
 type Segment struct {
 	ID uuid.UUID `json:"-"`
 	// count the inserted events
-	counter uint32
-	mu      sync.Mutex
-	pFile   source.ParquetFile
-	schema  *arrow.Schema
-	builder *array.RecordBuilder
-	writer  *writer.ArrowWriter
+	counter   uint32
+	mu        sync.Mutex
+	pFile     *LocalParquet
+	schema    *arrow.Schema
+	evtStruct *arrow.StructType
+	builder   *array.RecordBuilder
+	writer    *pqarrow.FileWriter
 }
 
 func NewSegment(dir string, schema *arrow.Schema) (*Segment, error) {
@@ -33,15 +36,16 @@ func NewSegment(dir string, schema *arrow.Schema) (*Segment, error) {
 
 	// create a parquet file
 	fileName := path.Join(dir, fmt.Sprintf("%s.parquet", id.String()))
-	pFile, err := newLocalParquetWrite(fileName)
+	pFile, err := NewLocalParquet(fileName)
 	if err != nil {
 		return nil, err
 	}
 
 	// create the apache arrow writer
-	w, err := writer.NewArrowWriter(schema, pFile, 1)
+	props := parquet.NewWriterProperties()
+	w, err := pqarrow.NewFileWriter(schema, pFile, props, pqarrow.DefaultWriterProps())
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	// create the new record builder for inserting data to arrow file
@@ -49,12 +53,13 @@ func NewSegment(dir string, schema *arrow.Schema) (*Segment, error) {
 	b := array.NewRecordBuilder(mem, schema)
 
 	return &Segment{
-		ID:      id,
-		schema:  schema,
-		mu:      sync.Mutex{},
-		pFile:   pFile,
-		builder: b,
-		writer:  w,
+		ID:        id,
+		schema:    schema,
+		evtStruct: arrow.StructOf(schema.Fields()...),
+		mu:        sync.Mutex{},
+		pFile:     pFile,
+		builder:   b,
+		writer:    w,
 	}, nil
 }
 
@@ -63,8 +68,10 @@ func (s *Segment) InsertData(data []byte) error {
 	defer s.mu.Unlock()
 
 	// insert data to arrow here
-	
-	s.builder.Field(0)
+	// arr, _, err := array.FromJSON(memory.DefaultAllocator, s.evtStruct, strings.NewReader(string(data)))
+	// if err != nil {
+	// 	return err
+	// }
 
 	// increase counter
 	atomic.AddUint32(&s.counter, 1)
@@ -83,7 +90,7 @@ func (s *Segment) Flush() error {
 	// write arrow file
 	defer s.builder.Release()
 	rec := s.builder.NewRecord()
-	if err := s.writer.WriteArrow(rec); err != nil {
+	if err := s.writer.Write(rec); err != nil {
 		return err
 	}
 

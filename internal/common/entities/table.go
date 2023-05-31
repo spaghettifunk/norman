@@ -7,9 +7,9 @@ import (
 )
 
 type Table struct {
-	Name        string  `json:"name"`
-	Schema      *Schema `json:"schema"`
-	EventSchema *arrow.Schema
+	Name        string        `json:"name"`
+	Schema      *Schema       `json:"schema"`
+	EventSchema *arrow.Schema `json:"-"`
 }
 
 func NewTable(name string, schema *Schema) (*Table, error) {

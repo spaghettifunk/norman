@@ -11,21 +11,21 @@ import (
 	"github.com/apache/arrow/go/v12/arrow/memory"
 
 	"github.com/apache/arrow/go/v12/parquet"
+	"github.com/apache/arrow/go/v12/parquet/compress"
 	"github.com/apache/arrow/go/v12/parquet/pqarrow"
 
 	"github.com/google/uuid"
 )
 
 type Segment struct {
-	ID uuid.UUID `json:"-"`
-	// count the inserted events
-	counter   uint32
-	mu        sync.Mutex
-	pFile     *LocalParquet
-	schema    *arrow.Schema
-	evtStruct *arrow.StructType
-	builder   *array.RecordBuilder
-	writer    *pqarrow.FileWriter
+	ID         uuid.UUID `json:"-"`
+	evtCounter uint32
+	mu         sync.Mutex
+	pFile      *LocalParquet
+	schema     *arrow.Schema
+	evtStruct  *arrow.StructType
+	builder    *array.RecordBuilder
+	writer     *pqarrow.FileWriter
 }
 
 func NewSegment(dir string, schema *arrow.Schema) (*Segment, error) {
@@ -42,7 +42,12 @@ func NewSegment(dir string, schema *arrow.Schema) (*Segment, error) {
 	}
 
 	// create the apache arrow writer
-	props := parquet.NewWriterProperties()
+	props := parquet.NewWriterProperties(
+		parquet.WithCompression(compress.Codecs.Snappy),
+		parquet.WithDictionaryDefault(false),
+		parquet.WithDataPageVersion(parquet.DataPageV1),
+		parquet.WithVersion(parquet.V1_0),
+	)
 	w, err := pqarrow.NewFileWriter(schema, pFile, props, pqarrow.DefaultWriterProps())
 	if err != nil {
 		panic(err)
@@ -67,19 +72,18 @@ func (s *Segment) InsertData(data []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// insert data to arrow here
-	// arr, _, err := array.FromJSON(memory.DefaultAllocator, s.evtStruct, strings.NewReader(string(data)))
-	// if err != nil {
-	// 	return err
-	// }
+	if err := s.builder.UnmarshalJSON(data); err != nil {
+		return err
+	}
 
-	// increase counter
-	atomic.AddUint32(&s.counter, 1)
+	// increment counter
+	atomic.AddUint32(&s.evtCounter, 1)
+
 	return nil
 }
 
-func (s *Segment) GetLength(colName string) int {
-	return int(s.counter)
+func (s *Segment) GetCounter() uint32 {
+	return s.evtCounter
 }
 
 // Flush persist the segment on disk
@@ -87,19 +91,20 @@ func (s *Segment) Flush() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// write arrow file
-	defer s.builder.Release()
 	rec := s.builder.NewRecord()
-	if err := s.writer.Write(rec); err != nil {
+
+	// closable
+	defer s.pFile.Close()
+	defer s.builder.Release()
+	defer s.writer.Close()
+	defer rec.Release()
+
+	// write arrow file
+	if err := s.writer.WriteBuffered(rec); err != nil {
 		return err
 	}
 
-	// store the parquet file
-	if err := s.pFile.Close(); err != nil {
-		return nil
-	}
-
-	// reset counter now that we flushed data to disk
-	atomic.SwapUint32(&s.counter, 0)
+	// reset counter
+	atomic.CompareAndSwapUint32(&s.evtCounter, s.evtCounter, 0)
 	return nil
 }

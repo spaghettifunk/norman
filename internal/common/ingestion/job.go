@@ -2,6 +2,7 @@ package ingestion
 
 import (
 	"github.com/google/uuid"
+
 	"github.com/spaghettifunk/norman/pkg/realtime/kafka"
 	"github.com/spaghettifunk/norman/pkg/realtime/kinesis"
 )
@@ -30,7 +31,7 @@ type IngestionJobConfiguration struct {
 }
 
 type segmentConfiguration struct {
-	SchemaName          string `json:"schemaName"`
+	TableName           string `json:"tableName"`
 	TimeColumnName      string `json:"timeColumnName"`
 	TimeType            string `json:"timeType"`
 	AllowNullTimeValue  bool   `json:"allowNullTimeValue,omitempty"`

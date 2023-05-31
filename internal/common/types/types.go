@@ -1,76 +1,66 @@
 package types
 
 import (
-	"fmt"
-	"time"
+	"github.com/apache/arrow/go/v12/arrow"
 )
 
-type DataTypeVal string
-
 const (
-	Integer   DataTypeVal = "INT"
-	Long      DataTypeVal = "LONG"
-	Float     DataTypeVal = "FLOAT"
-	Double    DataTypeVal = "DOUBLE"
-	Boolean   DataTypeVal = "BOOL"
-	Timestamp DataTypeVal = "TIMESTAMP"
-	String    DataTypeVal = "STRING"
-	JSON      DataTypeVal = "JSON"
-	Bytes     DataTypeVal = "BYTES"
-	Map       DataTypeVal = "MAP"
-	List      DataTypeVal = "LIST"
-	Unknown   DataTypeVal = "UNKNOWN"
+	Integer   string = "INT"
+	Long      string = "LONG"
+	Float     string = "FLOAT"
+	Double    string = "DOUBLE"
+	Boolean   string = "BOOL"
+	Timestamp string = "TIMESTAMP"
+	String    string = "STRING"
+	JSON      string = "JSON"
+	Bytes     string = "BYTES"
+	Map       string = "MAP"
+	List      string = "LIST"
+	Unknown   string = "UNKNOWN"
 )
 
 type DataType struct {
-	Name     DataTypeVal
+	TypeName string
 	Sortable bool
 	Numberic bool
-	Typ      interface{}
-	Tag      string
+	Typ      arrow.DataType
 }
 
-func (d DataTypeVal) ToString() string {
-	return string(d)
-}
-
-func newDataType(name DataTypeVal, numeric, sortable bool, typ interface{}, tag string) DataType {
+func newDataType(name string, numeric, sortable bool, typ arrow.DataType) DataType {
 	return DataType{
-		Name:     name,
+		TypeName: name,
 		Sortable: sortable,
 		Numberic: numeric,
 		Typ:      typ,
-		Tag:      tag,
 	}
 }
 
-func GetDataType(name string, typ DataTypeVal) DataType {
-	tag := fmt.Sprintf("`json:\"%s\"`", name)
-	switch typ {
+func GetDataType(tn string) DataType {
+	switch tn {
 	case Integer:
-		return newDataType(typ, true, true, 0, tag)
+		return newDataType(tn, true, true, arrow.PrimitiveTypes.Int32)
 	case Long:
-		return newDataType(typ, true, true, uint(0), tag)
+		return newDataType(tn, true, true, arrow.PrimitiveTypes.Uint32)
 	case Float:
-		return newDataType(typ, true, true, float32(0), tag)
+		return newDataType(tn, true, true, arrow.PrimitiveTypes.Float32)
 	case Double:
-		return newDataType(typ, true, true, float64(0), tag)
+		return newDataType(tn, true, true, arrow.PrimitiveTypes.Float64)
 	case Boolean:
-		return newDataType(typ, true, true, false, tag)
+		return newDataType(tn, true, true, arrow.FixedWidthTypes.Boolean)
 	case Timestamp:
-		return newDataType(typ, true, true, time.Time{}, tag)
+		return newDataType(tn, true, true, arrow.FixedWidthTypes.Date64)
 	case String:
-		return newDataType(typ, false, true, "", tag)
+		return newDataType(tn, false, true, arrow.BinaryTypes.String)
 	case JSON:
-		return newDataType(typ, false, false, "", tag)
+		return newDataType(tn, false, false, arrow.BinaryTypes.String)
 	case Bytes:
-		return newDataType(typ, true, true, make([]byte, 0), tag)
+		return newDataType(tn, true, true, arrow.BinaryTypes.Binary)
 	case Map:
-		return newDataType(typ, false, false, make(map[string]interface{}, 0), tag)
+		return newDataType(tn, false, false, &arrow.StructType{})
 	case List:
-		return newDataType(typ, false, true, make([]interface{}, 0), tag)
+		return newDataType(tn, false, true, &arrow.ListType{})
 	default:
-		return newDataType(Unknown, false, false, nil, tag)
+		return newDataType(Unknown, false, false, nil)
 	}
 }
 

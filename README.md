@@ -62,12 +62,26 @@ Read the events for testing
 
 If you see the events, you are done!
 
+### Ingest few thousands lines
+
+Copy the file to the kafka running container
+
+```bash
+docker cp test/data/transcript.jsonl kafka:/home/appuser/transcript.json
+```
+
+Execute the ingestion job to create the Kafka consumer and prepare Norman for ingesting events (see the steps below) and then push these messages to the kafka topic with the following command
+
+```bash
+[appuser@kafka]# ./kafka-console-producer --topic test-events --bootstrap-server localhost:9092 < /home/appuser/transcript.json
+```
+
 ### Run the ingestion job
 
 Create the schema in Norman
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d @test/commander/create_schema_transcript.json http://localhost:8080/commander/v1/tenants/default/schemas
+curl -X POST -H "Content-Type: application/json" -d @test/commander/create_schema_transcript.json http://localhost:8080/commander/v1/tenants/default/tables
 ```
 
 Create the ingestion job

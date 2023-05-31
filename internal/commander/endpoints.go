@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/spaghettifunk/norman/internal/common/ingestion"
-	"github.com/spaghettifunk/norman/internal/common/schema"
+	"github.com/spaghettifunk/norman/internal/common/entities"
+	cingestion "github.com/spaghettifunk/norman/internal/common/ingestion"
 )
 
 const (
@@ -54,7 +54,7 @@ func (c *Commander) DeleteTenant(ctx *fiber.Ctx) error {
 Ingestion Job routes
 */
 type CreateIngestionJobRequest struct {
-	Job ingestion.IngestionJobConfiguration `json:"job"`
+	Job cingestion.IngestionJobConfiguration `json:"job"`
 }
 
 func (c *Commander) GetJobs(ctx *fiber.Ctx) error {
@@ -99,49 +99,49 @@ func (c *Commander) DeleteJob(ctx *fiber.Ctx) error {
 }
 
 /*
-Schema routes
+Table routes
 */
-type CreateSchemaRequest struct {
-	Schema schema.Schema `json:"schema"`
+type CreateTableRequest struct {
+	Table entities.Table `json:"table"`
 }
 
-func (c *Commander) GetSchemas(ctx *fiber.Ctx) error {
+func (c *Commander) GetTables(ctx *fiber.Ctx) error {
 	return nil
 }
 
-func (c *Commander) GetSchema(ctx *fiber.Ctx) error {
+func (c *Commander) GetTable(ctx *fiber.Ctx) error {
 	return nil
 }
 
-func (c *Commander) CreateSchema(ctx *fiber.Ctx) error {
-	payload := &CreateSchemaRequest{}
+func (c *Commander) CreateTable(ctx *fiber.Ctx) error {
+	payload := &CreateTableRequest{}
 	if err := ctx.BodyParser(&payload); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	if err := c.schemaManager.Execute(&payload.Schema); err != nil {
+	if err := c.consul.PutTableConfiguration(&payload.Table); err != nil {
 		ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Failed to create Schema",
+			"message": "Failed to create Table",
 			"error":   err.Error(),
 		})
 		return err
 	}
 	ctx.Status(http.StatusOK).JSON(fiber.Map{
-		"message":   "Schema created successfully",
+		"message":   "Table created successfully",
 		"timestamp": time.Now().Format("2006-01-02 15:04:05"),
 	})
 
 	return nil
 }
 
-func (c *Commander) UpdateSchema(ctx *fiber.Ctx) error {
+func (c *Commander) UpdateTable(ctx *fiber.Ctx) error {
 	return nil
 }
 
-func (c *Commander) PatchSchema(ctx *fiber.Ctx) error {
+func (c *Commander) PatchTable(ctx *fiber.Ctx) error {
 	return nil
 }
 
-func (c *Commander) DeleteSchema(ctx *fiber.Ctx) error {
+func (c *Commander) DeleteTable(ctx *fiber.Ctx) error {
 	return nil
 }

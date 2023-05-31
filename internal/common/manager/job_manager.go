@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog/log"
-	common_ingestion "github.com/spaghettifunk/norman/internal/common/ingestion"
+	cingestion "github.com/spaghettifunk/norman/internal/common/ingestion"
 	"github.com/spaghettifunk/norman/internal/storage/ingestion"
 	"github.com/spaghettifunk/norman/pkg/consul"
 	"github.com/spaghettifunk/norman/pkg/workerpool"
@@ -39,20 +39,22 @@ func (ijm *IngestionJobManager) Initialize() error {
 }
 
 // TODO: add a Final State Machine for handling the job
-func (ijm *IngestionJobManager) Execute(config *common_ingestion.IngestionJobConfiguration) error {
+func (ijm *IngestionJobManager) Execute(config *cingestion.IngestionJobConfiguration) error {
 	// parse config and transform into an IngestionJob
-	if err := common_ingestion.NewIngestionJob(config); err != nil {
+	if err := cingestion.NewIngestionJob(config); err != nil {
 		return err
 	}
 
-	// fetch schema
-	schema, err := ijm.consul.GetSchemaConfiguration(config.SegmentConfiguration.SchemaName)
+	// fetch table information
+	table, err := ijm.consul.GetTableConfiguration(config.SegmentConfiguration.TableName)
 	if err != nil {
 		return err
 	}
+	// get arrow schema
+	table.EventSchema = table.Schema.GetArrowSchema()
 
 	// create the actual job to be exectued
-	job, err := ingestion.NewJob(config, schema)
+	job, err := ingestion.NewJob(config, table)
 	if err != nil {
 		return err
 	}

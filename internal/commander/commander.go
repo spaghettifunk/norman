@@ -22,7 +22,6 @@ type Commander struct {
 	consul              *consul.Consul
 	config              configuration.Configuration
 	app                 *fiber.App
-	schemaManager       *manager.SchemaManager
 	ingestionJobManager *manager.IngestionJobManager
 }
 
@@ -61,7 +60,6 @@ func New(config configuration.Configuration) (*Commander, error) {
 		consul:              cs,
 		config:              config,
 		app:                 app,
-		schemaManager:       manager.NewSchemaManager(cs),
 		ingestionJobManager: ijb,
 	}
 
@@ -85,14 +83,14 @@ func (c *Commander) setupRoutes() {
 	tenantEndpoints.Patch("/:tenantId", c.PatchTenant)
 	tenantEndpoints.Delete("/:tenantId", c.DeleteTenant)
 
-	// schema endpoints
-	schemaEndpoints := tenantEndpoints.Group("/:tenantId/schemas")
-	schemaEndpoints.Get("/", c.GetSchemas)
-	schemaEndpoints.Post("/", c.CreateSchema)
-	schemaEndpoints.Get("/:schemaName", c.GetSchema)
-	schemaEndpoints.Put("/:schemaName", c.UpdateSchema)
-	schemaEndpoints.Patch("/:schemaName", c.PatchSchema)
-	schemaEndpoints.Delete("/:schemaName", c.DeleteSchema)
+	// table endpoints
+	tableEndpoints := tenantEndpoints.Group("/:tenantId/tables")
+	tableEndpoints.Get("/", c.GetTables)
+	tableEndpoints.Post("/", c.CreateTable)
+	tableEndpoints.Get("/:tableName", c.GetTable)
+	tableEndpoints.Put("/:tableName", c.UpdateTable)
+	tableEndpoints.Patch("/:tableName", c.PatchTable)
+	tableEndpoints.Delete("/:tableName", c.DeleteTable)
 
 	// ingestion job endpoints
 	jobEndpoints := tenantEndpoints.Group("/:tenantId/jobs")
@@ -120,10 +118,6 @@ func (c *Commander) StartServer(address string) error {
 }
 
 func (c *Commander) ShutdownServer() error {
-	log.Info().Msg("shutting down schema manager...")
-	if err := c.schemaManager.Shutdown(); err != nil {
-		return err
-	}
 	log.Info().Msg("shutting down ingestion job manager...")
 	if err := c.ingestionJobManager.Shutdown(); err != nil {
 		return err

@@ -8,9 +8,10 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/spaghettifunk/norman/internal/storage/segment"
+	"github.com/spaghettifunk/norman/internal/storage/manager"
 
 	"github.com/Shopify/sarama"
 )
@@ -31,7 +32,7 @@ type KafkaIngestor struct {
 	Brokers  []string
 
 	// below are used to validate and process each segment
-	segmentManager *segment.SegmentManager
+	tableManager *manager.TableManager
 
 	// below are used for consuming messages
 	ready  chan bool
@@ -40,7 +41,7 @@ type KafkaIngestor struct {
 	cancel context.CancelFunc
 }
 
-func NewIngestor(kcfg *KafkaConfiguration, sm *segment.SegmentManager) (*KafkaIngestor, error) {
+func NewIngestor(kcfg *KafkaConfiguration, manager *manager.TableManager) (*KafkaIngestor, error) {
 	bs := strings.Split(kcfg.Brokers, ",")
 
 	cfg := createConfiguration(kcfg)
@@ -51,14 +52,14 @@ func NewIngestor(kcfg *KafkaConfiguration, sm *segment.SegmentManager) (*KafkaIn
 
 	ctx, cancel := context.WithCancel(context.Background())
 	return &KafkaIngestor{
-		Consumer:       consumer,
-		Topic:          kcfg.Topic,
-		Brokers:        bs,
-		segmentManager: sm,
-		ready:          make(chan bool),
-		wg:             &sync.WaitGroup{},
-		ctx:            ctx,
-		cancel:         cancel,
+		Consumer:     consumer,
+		Topic:        kcfg.Topic,
+		Brokers:      bs,
+		tableManager: manager,
+		ready:        make(chan bool),
+		wg:           &sync.WaitGroup{},
+		ctx:          ctx,
+		cancel:       cancel,
 	}, nil
 }
 
@@ -181,38 +182,42 @@ func (k *KafkaIngestor) Cleanup(sarama.ConsumerGroupSession) error {
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 func (k *KafkaIngestor) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	// var fflush time.Time
-	if err := k.segmentManager.CreateNewSegment(); err != nil {
+
+	var fflush time.Time
+	if err := k.tableManager.CreateNewSegment(); err != nil {
 		return err
 	}
 
 	// Replace this with the Granularity of the segment
-	// flushInterval := time.Duration(FlushIntervalInSec) * time.Second
-	// ticker := time.NewTicker(time.Second)
-	// defer ticker.Stop()
+	flushInterval := time.Duration(FlushIntervalInSec) * time.Second
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case message := <-claim.Messages():
 			log.Debug().Msg(string(message.Value))
-			if err := k.segmentManager.InsertDataInSegment(message.Value); err != nil {
+			if err := k.tableManager.InsertData(message.Value); err != nil {
 				log.Error().Err(err).Msg("error in inserting data in segment")
 			}
-			session.MarkMessage(message, "")
-		// case <-ticker.C:
-		// 	// Refresh pipe
-		// 	tt := time.Now()
-		// 	if tt.After(fflush) {
-		// 		log.Debug().Msg("Force flush (interval) triggered")
+			session.MarkMessage(message, "ACK")
+		case <-ticker.C:
+			// Refresh pipe
+			tt := time.Now()
+			if tt.After(fflush) {
+				log.Debug().Msg("Force flush (interval) triggered")
 
-		// 		// Flush Segment
-		// 		if err := k.segmentManager.FlushSegment(); err != nil {
-		// 			log.Panic().Err(err).Msg("error in flushing the segment")
-		// 		}
-
-		// 		fflush = tt.Add(flushInterval)
-		// 		log.Debug().Msg("Force flush (interval) finished")
-		// 	}
+				// Flush Segment
+				if k.tableManager.GetSegmentSize() > 0 {
+					if err := k.tableManager.FlushSegment(); err != nil {
+						log.Panic().Err(err).Msg("error in flushing the segment")
+					}
+					// commit the consumed messages
+					session.Commit()
+				}
+				fflush = tt.Add(flushInterval)
+				log.Debug().Msg("Force flush (interval) finished")
+			}
 		case <-session.Context().Done():
 			return nil
 		}

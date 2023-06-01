@@ -56,7 +56,7 @@ func commanderRun(cmd *cobra.Command, args []string) {
 	go func() {
 		addr := fmt.Sprintf("%s:%d", normanCfg.Commander.Address, normanCfg.Commander.Port)
 		if err := c.StartServer(addr); err != nil {
-			log.Fatal().Err(err)
+			log.Fatal().Err(err).Msg(err.Error())
 			close(done)
 		}
 	}()

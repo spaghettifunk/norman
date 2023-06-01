@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package storage.v1;
+
+option go_package = "github.com/spaghettifunk/norman/proto/storage/storage_v1";
+
+service Storage {
+  rpc Ping(PingRequest) returns (PingResponse);
+  rpc CreateIngestionJob(CreateIngestionJobRequest) returns (CreateIngestionJobResponse) {}
+}
+
+message PingRequest { }
+
+message PingResponse {
+  string msg = 1;
+}
+
+message CreateIngestionJobRequest  {
+  string jobID = 1;
+}
+  
+message CreateIngestionJobResponse  {
+    string storageID = 1;
+    string message = 2;
+}

@@ -1,12 +1,14 @@
 package commander
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/spaghettifunk/norman/internal/common/entities"
 	cingestion "github.com/spaghettifunk/norman/internal/common/ingestion"
+	storage_v1 "github.com/spaghettifunk/norman/proto/v1/storage"
 )
 
 const (
@@ -71,15 +73,37 @@ func (c *Commander) CreateJob(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	if err := c.ingestionJobManager.Execute(&payload.Job); err != nil {
+	// parse config and transform into an IngestionJob
+	if err := cingestion.NewIngestionJob(&payload.Job); err != nil {
 		ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to create ingestion job",
 			"error":   err.Error(),
 		})
 		return err
 	}
+
+	if err := c.consul.PutIngestionJobConfiguration(&payload.Job); err != nil {
+		ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to save ingestion job into Consul",
+			"error":   err.Error(),
+		})
+		return err
+	}
+
+	// call gRPC function to trigger the ingestion job
+	req := &storage_v1.CreateIngestionJobRequest{JobID: payload.Job.ID.String()}
+	resp, err := c.storageGRPCClient.CreateIngestionJob(context.Background(), req)
+	if err != nil {
+		ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to create ingestion job",
+			"error":   err.Error(),
+		})
+		return err
+	}
+
 	ctx.Status(http.StatusOK).JSON(fiber.Map{
-		"message":   "Ingestion job created successfully",
+		"storageID": resp.StorageID,
+		"message":   resp.Message,
 		"timestamp": time.Now().Format("2006-01-02 15:04:05"),
 	})
 

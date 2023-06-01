@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package broker.v1;
+
+option go_package = "github.com/spaghettifunk/norman/proto/broker/broker_v1";
+
+service Broker {
+  rpc QueryStorage(QueryRequest) returns (QueryResponse) {}
+}
+
+message QueryRequest  {
+    string query = 1;
+}
+  
+message QueryResponse  {
+    string brokerID = 1;
+    repeated bytes result = 2;
+}

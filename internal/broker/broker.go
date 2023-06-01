@@ -15,11 +15,12 @@ import (
 )
 
 type Broker struct {
-	Name   string
-	ID     uuid.UUID
-	consul *consul.Consul
-	config configuration.Configuration
-	app    *fiber.App
+	Name     string
+	ID       uuid.UUID
+	Hostname string
+	consul   *consul.Consul
+	config   configuration.Configuration
+	app      *fiber.App
 }
 
 func New(config configuration.Configuration) (*Broker, error) {
@@ -44,12 +45,19 @@ func New(config configuration.Configuration) (*Broker, error) {
 		return nil, err
 	}
 
+	// get the hostname from the machine
+	hn, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
 	br := &Broker{
-		Name:   "broker",
-		ID:     id,
-		consul: cs,
-		config: config,
-		app:    app,
+		Name:     "broker",
+		ID:       id,
+		Hostname: hn,
+		consul:   cs,
+		config:   config,
+		app:      app,
 	}
 
 	br.setupRoutes()

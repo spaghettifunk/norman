@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BrokerClient interface {
+	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	QueryStorage(ctx context.Context, in *QueryRequest, opts ...grpc.CallOption) (*QueryResponse, error)
 }
 
@@ -31,6 +32,15 @@ type brokerClient struct {
 
 func NewBrokerClient(cc grpc.ClientConnInterface) BrokerClient {
 	return &brokerClient{cc}
+}
+
+func (c *brokerClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+	out := new(PingResponse)
+	err := c.cc.Invoke(ctx, "/broker.v1.Broker/Ping", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *brokerClient) QueryStorage(ctx context.Context, in *QueryRequest, opts ...grpc.CallOption) (*QueryResponse, error) {
@@ -46,6 +56,7 @@ func (c *brokerClient) QueryStorage(ctx context.Context, in *QueryRequest, opts 
 // All implementations should embed UnimplementedBrokerServer
 // for forward compatibility
 type BrokerServer interface {
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	QueryStorage(context.Context, *QueryRequest) (*QueryResponse, error)
 }
 
@@ -53,6 +64,9 @@ type BrokerServer interface {
 type UnimplementedBrokerServer struct {
 }
 
+func (UnimplementedBrokerServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
+}
 func (UnimplementedBrokerServer) QueryStorage(context.Context, *QueryRequest) (*QueryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryStorage not implemented")
 }
@@ -66,6 +80,24 @@ type UnsafeBrokerServer interface {
 
 func RegisterBrokerServer(s grpc.ServiceRegistrar, srv BrokerServer) {
 	s.RegisterService(&Broker_ServiceDesc, srv)
+}
+
+func _Broker_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BrokerServer).Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/broker.v1.Broker/Ping",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BrokerServer).Ping(ctx, req.(*PingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Broker_QueryStorage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -93,6 +125,10 @@ var Broker_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "broker.v1.Broker",
 	HandlerType: (*BrokerServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Ping",
+			Handler:    _Broker_Ping_Handler,
+		},
 		{
 			MethodName: "QueryStorage",
 			Handler:    _Broker_QueryStorage_Handler,

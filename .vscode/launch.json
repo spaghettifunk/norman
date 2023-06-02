@@ -11,6 +11,22 @@
       "mode": "auto",
       "program": "${workspaceFolder}/main.go",
       "args": ["commander"]
+    },
+    {
+      "name": "Storage",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": ["storage"]
+    },
+    {
+      "name": "Broker",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": ["broker"]
     }
   ]
 }

@@ -29,7 +29,7 @@ func brokerRun(cmd *cobra.Command, args []string) {
 	}
 
 	// initialize global logging
-	logger.InitLogger(*normanCfg)
+	logger.InitLogger("broker", *normanCfg)
 
 	// initialize service
 	c, err := broker.New(*normanCfg)

@@ -139,9 +139,41 @@ func (c *Consul) GetTableConfiguration(name string) (*entities.Table, error) {
 	return cfg, nil
 }
 
+// Store the consul ingestion job configuration
+func (c *Consul) PutIngestionJobConfiguration(config *cingestion.IngestionJobConfiguration) error {
+	cfg, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	key := formattedJobConfigKey(config.ID.String())
+	pair := api.KVPair{
+		Key:   key,
+		Flags: 0,
+		Value: cfg,
+	}
+	_, err = c.KV.Put(&pair, nil)
+	return err
+}
+
+// Retrieve the consul ingestion job configuration
+func (c *Consul) GetIngestionJobConfiguration(id string) (*cingestion.IngestionJobConfiguration, error) {
+	key := formattedJobConfigKey(id)
+	qo := api.QueryOptions{}
+	v, _, err := c.KV.Get(key, &qo)
+	if err != nil {
+		return nil, err
+	}
+	var cfg *cingestion.IngestionJobConfiguration
+	if err := json.Unmarshal(v.Value, &cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
 // Store the consul ingestion job status
 func (c *Consul) PutIngestionJobStatus(id string, status cingestion.JobStatus) error {
-	key := formattedJobKey(id)
+	key := formattedJobStatusKey(id)
 	pair := api.KVPair{
 		Key:   key,
 		Flags: 0,
@@ -153,7 +185,7 @@ func (c *Consul) PutIngestionJobStatus(id string, status cingestion.JobStatus) e
 
 // Retrieve the consul ingestion job status
 func (c *Consul) GetIngestionJobStatus(id string) (cingestion.JobStatus, error) {
-	key := formattedJobKey(id)
+	key := formattedJobStatusKey(id)
 	qo := api.QueryOptions{}
 	v, _, err := c.KV.Get(key, &qo)
 	if err != nil {
@@ -179,7 +211,7 @@ func (c *Consul) GetService(s service.Service) error {
 
 // formattedName returns correctly formatted name of the service
 func formattedName(s service.Service) string {
-	name := fmt.Sprintf("%v-%v", s.GetName(), s.GetID())
+	name := fmt.Sprintf("%v-%v", s.GetName(), s.GetHost())
 	return strings.Replace(name, ".", "-", -1)
 }
 
@@ -195,16 +227,23 @@ func formattedTableKey(name string) string {
 	return fmt.Sprintf("%v/%v/%v/definition", TablesKVPath, "default", name)
 }
 
-// formattedJobKey returns correctly formatted key of the job
+// formattedJobStatusKey returns correctly formatted key of the job
 // TODO: how do we get the tenant name?
-func formattedJobKey(id string) string {
-	// Format: Jobs/{tenantId}/jobId/definition
-	return fmt.Sprintf("%v/%v/%v/definition", JobsKVPath, "default", id)
+func formattedJobStatusKey(id string) string {
+	// Format: Jobs/{tenantId}/jobId/status
+	return fmt.Sprintf("%v/%v/%v/status", JobsKVPath, "default", id)
+}
+
+// formattedJobConfigKey returns correctly formatted key of the job
+// TODO: how do we get the tenant name?
+func formattedJobConfigKey(id string) string {
+	// Format: Jobs/{tenantId}/jobId/configurations
+	return fmt.Sprintf("%v/%v/%v/configurations", JobsKVPath, "default", id)
 }
 
 // formattedID returns correctly formatted id of the service
 func formattedID(s service.Service) string {
-	return fmt.Sprintf("%v-%v-%v", formattedName(s), s.GetHost(), s.GetPort())
+	return fmt.Sprintf("%v-%v-%v", formattedName(s), s.GetID(), s.GetPort())
 }
 
 // Heartbeat begins heart beat of health check.

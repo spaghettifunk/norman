@@ -19,13 +19,15 @@ var levels = map[string]int8{
 	"trace": -1,
 }
 
-func InitLogger(lc configuration.Configuration) {
+func InitLogger(service string, lc configuration.Configuration) {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
 	// in case the user put some random capitals letter
 	ll := strings.ToLower(lc.Logger.Level)
 	l := zerolog.Level(levels[ll])
 	zerolog.SetGlobalLevel(l)
+
+	log.Logger = log.With().Str("service", service).Logger()
 
 	if lc.Logger.Pretty {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})

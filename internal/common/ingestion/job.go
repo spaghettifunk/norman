@@ -20,7 +20,7 @@ const (
 )
 
 type IngestionJobConfiguration struct {
-	ID                     uuid.UUID               `json:"-"`
+	ID                     uuid.UUID               `json:"id,omitempty"`
 	Name                   string                  `json:"name"`
 	Type                   IngestionType           `json:"type"`
 	IndexConfiguration     *indexConfiguration     `json:"indexConfiguration,omitempty"`

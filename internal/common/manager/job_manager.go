@@ -40,11 +40,6 @@ func (ijm *IngestionJobManager) Initialize() error {
 
 // TODO: add a Final State Machine for handling the job
 func (ijm *IngestionJobManager) Execute(config *cingestion.IngestionJobConfiguration) error {
-	// parse config and transform into an IngestionJob
-	if err := cingestion.NewIngestionJob(config); err != nil {
-		return err
-	}
-
 	// fetch table information
 	table, err := ijm.consul.GetTableConfiguration(config.SegmentConfiguration.TableName)
 	if err != nil {

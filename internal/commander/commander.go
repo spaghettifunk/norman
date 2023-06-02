@@ -1,8 +1,10 @@
 package commander
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"
@@ -11,18 +13,34 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/swagger"
 	"github.com/rs/zerolog/log"
+
 	configuration "github.com/spaghettifunk/norman/internal/common"
-	"github.com/spaghettifunk/norman/internal/common/manager"
+	"github.com/spaghettifunk/norman/internal/common/utils"
 	"github.com/spaghettifunk/norman/pkg/consul"
+	storageproto "github.com/spaghettifunk/norman/proto/v1/storage"
+
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+)
+
+var (
+	retriableErrors = []codes.Code{codes.Unavailable, codes.DataLoss}
+	retryTimeout    = 50 * time.Millisecond
 )
 
 type Commander struct {
-	Name                string
-	ID                  uuid.UUID
-	consul              *consul.Consul
-	config              configuration.Configuration
-	app                 *fiber.App
-	ingestionJobManager *manager.IngestionJobManager
+	Name     string
+	ID       uuid.UUID
+	Hostname string
+	consul   *consul.Consul
+	config   configuration.Configuration
+	app      *fiber.App
+
+	// grpc stuff
+	storageGRPCConn   *grpc.ClientConn
+	storageGRPCClient storageproto.StorageClient
 }
 
 func New(config configuration.Configuration) (*Commander, error) {
@@ -42,25 +60,24 @@ func New(config configuration.Configuration) (*Commander, error) {
 		return nil, err
 	}
 
-	// Create the new job manager
-	ijb, err := manager.NewIngestionJobManager(cs)
-	if err != nil {
-		return nil, err
-	}
-	// initialize job manager
-	ijb.Initialize()
-
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
 	}
+
+	// get the hostname from the machine
+	hn, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
 	c := &Commander{
-		Name:                "commander",
-		ID:                  id,
-		consul:              cs,
-		config:              config,
-		app:                 app,
-		ingestionJobManager: ijb,
+		Name:     "commander",
+		ID:       id,
+		Hostname: hn,
+		consul:   cs,
+		config:   config,
+		app:      app,
 	}
 
 	c.setupRoutes()
@@ -103,12 +120,17 @@ func (c *Commander) setupRoutes() {
 }
 
 func (c *Commander) StartServer(address string) error {
+	var err error
 	// register to consul
 	log.Info().Msg("register and declare Commander to Consul")
-	if err := c.consul.Start(c); err != nil {
+	if err = c.consul.Start(c); err != nil {
 		return err
 	}
-	if err := c.consul.Declare(c); err != nil {
+	if err = c.consul.Declare(c); err != nil {
+		return err
+	}
+
+	if err = c.initializeGRPCClient(); err != nil {
 		return err
 	}
 
@@ -117,15 +139,52 @@ func (c *Commander) StartServer(address string) error {
 	return c.app.Listen(address)
 }
 
-func (c *Commander) ShutdownServer() error {
-	log.Info().Msg("shutting down ingestion job manager...")
-	if err := c.ingestionJobManager.Shutdown(); err != nil {
+func (c *Commander) initializeGRPCClient() error {
+	var err error
+
+	unaryInterceptor := retry.UnaryClientInterceptor(
+		retry.WithCodes(retriableErrors...),
+		retry.WithMax(3),
+		retry.WithBackoff(retry.BackoffLinear(retryTimeout)),
+	)
+
+	rpcAddr, err := utils.RPCAddr(c.config.Storage.BindAddr, c.config.Storage.RPCPort)
+	if err != nil {
 		return err
 	}
 
+	// initialize gRPC client of Storage Service
+	log.Info().Msg("initialize gRPC client of Storage Service")
+	c.storageGRPCConn, err = grpc.Dial(rpcAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(unaryInterceptor),
+	)
+	if err != nil {
+		return err
+	}
+	c.storageGRPCClient = storageproto.NewStorageClient(c.storageGRPCConn)
+
+	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
+	defer cancel()
+	if _, err := c.storageGRPCClient.Ping(ctx, &storageproto.PingRequest{},
+		retry.WithMax(3),
+		retry.WithPerRetryTimeout(1*time.Second),
+	); err != nil {
+		return err
+	}
+	return err
+}
+
+func (c *Commander) ShutdownServer() error {
 	// deregister to consul
 	log.Info().Msg("deregister Commander to Consul")
 	if err := c.consul.Stop(c); err != nil {
+		return err
+	}
+
+	// closing gRPC storage service client
+	log.Info().Msg("close gRCP client connection of Storage Service")
+	if err := c.storageGRPCConn.Close(); err != nil {
 		return err
 	}
 
@@ -134,11 +193,7 @@ func (c *Commander) ShutdownServer() error {
 }
 
 func (c *Commander) GetHost() string {
-	hn, err := os.Hostname()
-	if err != nil {
-		panic(err.Error())
-	}
-	return hn
+	return c.Hostname
 }
 
 func (c *Commander) GetPort() string {

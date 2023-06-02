@@ -1,6 +1,8 @@
 package configuration
 
 import (
+	"crypto/tls"
+
 	"github.com/spf13/viper"
 )
 
@@ -28,9 +30,13 @@ type broker struct {
 }
 
 type storage struct {
-	Address     string       `toml:"address"`
-	Port        int          `toml:"port"`
-	DeepStorage *deepStorage `toml:"deep_storage"`
+	Address         string `toml:"address"`
+	Port            int    `toml:"port"`
+	BindAddr        string `toml:"bind_addr" description:"Address where binding the gRPC server to"`
+	RPCPort         int    `toml:"rpc_port" description:"Port for RPC clients connections."`
+	ServerTLSConfig *tls.Config
+	PeerTLSConfig   *tls.Config
+	DeepStorage     *deepStorage `toml:"deep_storage"`
 }
 
 type deepStorage struct {
@@ -58,8 +64,10 @@ func Fetch() *Configuration {
 			Port:    getIntOrDefault("broker.port", 8081),
 		},
 		Storage: &storage{
-			Address: getStringOrDefault("storage.address", "127.0.0.1"),
-			Port:    getIntOrDefault("storage.port", 8082),
+			Address:  getStringOrDefault("storage.address", "127.0.0.1"),
+			Port:     getIntOrDefault("storage.port", 8082),
+			BindAddr: getStringOrDefault("bind_addr", "127.0.0.1:8401"),
+			RPCPort:  getIntOrDefault("rpc_port", 8400),
 		},
 		Logger: &logger{
 			Level:  getStringOrDefault("logger.level", "info"),

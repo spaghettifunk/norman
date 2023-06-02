@@ -26,7 +26,7 @@ func commanderRun(cmd *cobra.Command, args []string) {
 	}
 
 	// initialize global logging
-	logger.InitLogger(*normanCfg)
+	logger.InitLogger("commander", *normanCfg)
 
 	// initialize service
 	c, err := commander.New(*normanCfg)

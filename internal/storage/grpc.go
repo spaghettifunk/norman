@@ -103,3 +103,7 @@ func (s *grpcServer) CreateIngestionJob(ctx context.Context, req *storageproto.C
 
 	return &storageproto.CreateIngestionJobResponse{StorageID: s.storageID, Message: "Ingestion Job created successfully"}, nil
 }
+
+func (s *grpcServer) QueryTable(ctx context.Context, req *storageproto.QueryTableRequest) (*storageproto.QueryTableResponse, error) {
+	return nil, nil
+}

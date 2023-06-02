@@ -130,7 +130,7 @@ func (c *Commander) StartServer(address string) error {
 		return err
 	}
 
-	if err = c.initializeGRPCClients(); err != nil {
+	if err = c.initializeGRPCClient(); err != nil {
 		return err
 	}
 
@@ -139,7 +139,7 @@ func (c *Commander) StartServer(address string) error {
 	return c.app.Listen(address)
 }
 
-func (c *Commander) initializeGRPCClients() error {
+func (c *Commander) initializeGRPCClient() error {
 	var err error
 
 	unaryInterceptor := retry.UnaryClientInterceptor(

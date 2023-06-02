@@ -29,7 +29,7 @@ func storageRun(cmd *cobra.Command, args []string) {
 	}
 
 	// initialize global logging
-	logger.InitLogger(*normanCfg)
+	logger.InitLogger("storage", *normanCfg)
 
 	// initialize service
 	st, err := storageserver.New(*normanCfg)

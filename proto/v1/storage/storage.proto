@@ -7,6 +7,7 @@ option go_package = "github.com/spaghettifunk/norman/proto/storage/storage_v1";
 service Storage {
   rpc Ping(PingRequest) returns (PingResponse);
   rpc CreateIngestionJob(CreateIngestionJobRequest) returns (CreateIngestionJobResponse) {}
+  rpc QueryTable(QueryTableRequest) returns (QueryTableResponse) {}
 }
 
 message PingRequest { }
@@ -22,4 +23,15 @@ message CreateIngestionJobRequest  {
 message CreateIngestionJobResponse  {
     string storageID = 1;
     string message = 2;
+}
+
+message QueryTableRequest  {
+  string brokerID = 1;
+  string table = 2;
+  string query = 3;
+}
+
+message QueryTableResponse  {
+  string brokerID = 1;
+  repeated bytes result = 2;
 }

@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type StorageClient interface {
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	CreateIngestionJob(ctx context.Context, in *CreateIngestionJobRequest, opts ...grpc.CallOption) (*CreateIngestionJobResponse, error)
+	QueryTable(ctx context.Context, in *QueryTableRequest, opts ...grpc.CallOption) (*QueryTableResponse, error)
 }
 
 type storageClient struct {
@@ -52,12 +53,22 @@ func (c *storageClient) CreateIngestionJob(ctx context.Context, in *CreateIngest
 	return out, nil
 }
 
+func (c *storageClient) QueryTable(ctx context.Context, in *QueryTableRequest, opts ...grpc.CallOption) (*QueryTableResponse, error) {
+	out := new(QueryTableResponse)
+	err := c.cc.Invoke(ctx, "/storage.v1.Storage/QueryTable", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // StorageServer is the server API for Storage service.
 // All implementations should embed UnimplementedStorageServer
 // for forward compatibility
 type StorageServer interface {
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	CreateIngestionJob(context.Context, *CreateIngestionJobRequest) (*CreateIngestionJobResponse, error)
+	QueryTable(context.Context, *QueryTableRequest) (*QueryTableResponse, error)
 }
 
 // UnimplementedStorageServer should be embedded to have forward compatible implementations.
@@ -69,6 +80,9 @@ func (UnimplementedStorageServer) Ping(context.Context, *PingRequest) (*PingResp
 }
 func (UnimplementedStorageServer) CreateIngestionJob(context.Context, *CreateIngestionJobRequest) (*CreateIngestionJobResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateIngestionJob not implemented")
+}
+func (UnimplementedStorageServer) QueryTable(context.Context, *QueryTableRequest) (*QueryTableResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryTable not implemented")
 }
 
 // UnsafeStorageServer may be embedded to opt out of forward compatibility for this service.
@@ -118,6 +132,24 @@ func _Storage_CreateIngestionJob_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Storage_QueryTable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTableRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StorageServer).QueryTable(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/storage.v1.Storage/QueryTable",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StorageServer).QueryTable(ctx, req.(*QueryTableRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Storage_ServiceDesc is the grpc.ServiceDesc for Storage service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -132,6 +164,10 @@ var Storage_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateIngestionJob",
 			Handler:    _Storage_CreateIngestionJob_Handler,
+		},
+		{
+			MethodName: "QueryTable",
+			Handler:    _Storage_QueryTable_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

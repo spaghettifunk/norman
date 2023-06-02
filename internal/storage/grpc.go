@@ -105,5 +105,8 @@ func (s *grpcServer) CreateIngestionJob(ctx context.Context, req *storageproto.C
 }
 
 func (s *grpcServer) QueryTable(ctx context.Context, req *storageproto.QueryTableRequest) (*storageproto.QueryTableResponse, error) {
-	return nil, nil
+	return &storageproto.QueryTableResponse{
+		BrokerID: "1234-4567-7890-aaaa-bbbb-cccc",
+		Result:   []byte("Hello World"),
+	}, nil
 }

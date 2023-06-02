@@ -33,5 +33,5 @@ message QueryTableRequest  {
 
 message QueryTableResponse  {
   string brokerID = 1;
-  repeated bytes result = 2;
+  bytes result = 2;
 }

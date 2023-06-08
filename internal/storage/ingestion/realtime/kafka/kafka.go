@@ -181,17 +181,9 @@ func (k *KafkaIngestor) Cleanup(sarama.ConsumerGroupSession) error {
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 func (k *KafkaIngestor) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-
-	// var fflush time.Time
 	if err := k.tableManager.CreateNewSegment(); err != nil {
 		return err
 	}
-
-	// Replace this with the Granularity of the segment
-	// flushInterval := time.Duration(FlushIntervalInSec) * time.Second
-	// ticker := time.NewTicker(time.Second)
-	// defer ticker.Stop()
-
 	for {
 		select {
 		case message := <-claim.Messages():
@@ -199,23 +191,6 @@ func (k *KafkaIngestor) ConsumeClaim(session sarama.ConsumerGroupSession, claim 
 				log.Error().Err(err).Msg("error in inserting data in segment")
 			}
 			session.MarkMessage(message, "ACK")
-		// case <-ticker.C:
-		// 	// Refresh pipe
-		// 	tt := time.Now()
-		// 	if tt.After(fflush) {
-		// 		log.Debug().Msg("Force flush (interval) triggered")
-
-		// 		// Flush Segment
-		// 		if k.tableManager.GetSegmentSize() > 0 {
-		// 			if err := k.tableManager.FlushSegment(); err != nil {
-		// 				log.Panic().Err(err).Msg("error in flushing the segment")
-		// 			}
-		// 			// commit the consumed messages
-		// 			session.Commit()
-		// 		}
-		// 		fflush = tt.Add(flushInterval)
-		// 		log.Debug().Msg("Force flush (interval) finished")
-		// 	}
 		case <-session.Context().Done():
 			return nil
 		}

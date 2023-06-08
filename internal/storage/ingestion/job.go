@@ -6,12 +6,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+
 	"github.com/spaghettifunk/norman/internal/common/entities"
 	cingestion "github.com/spaghettifunk/norman/internal/common/ingestion"
+	"github.com/spaghettifunk/norman/internal/storage/ingestion/realtime/kafka"
+	"github.com/spaghettifunk/norman/internal/storage/ingestion/realtime/kinesis"
 	"github.com/spaghettifunk/norman/internal/storage/manager"
-
-	"github.com/spaghettifunk/norman/pkg/realtime/kafka"
-	"github.com/spaghettifunk/norman/pkg/realtime/kinesis"
 )
 
 type Ingestion interface {

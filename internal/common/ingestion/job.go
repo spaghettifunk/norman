@@ -3,8 +3,8 @@ package ingestion
 import (
 	"github.com/google/uuid"
 
-	"github.com/spaghettifunk/norman/pkg/realtime/kafka"
-	"github.com/spaghettifunk/norman/pkg/realtime/kinesis"
+	"github.com/spaghettifunk/norman/internal/storage/ingestion/realtime/kafka"
+	"github.com/spaghettifunk/norman/internal/storage/ingestion/realtime/kinesis"
 )
 
 type IngestionType string

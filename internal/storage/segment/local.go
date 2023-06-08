@@ -2,6 +2,7 @@ package segment
 
 import (
 	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -10,13 +11,23 @@ type LocalParquet struct {
 	mu   sync.Mutex
 }
 
-func NewLocalParquet(fileName string) (*LocalParquet, error) {
-	f, err := os.Create(fileName)
+func NewLocalParquet(dir, filename string) (*LocalParquet, error) {
+	// Create the directory if it doesn't exist
+	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
+
 	myFile := new(LocalParquet)
-	myFile.file = f
+
+	// Create the file if it doesn't exist
+	filePath := filepath.Join(dir, filename)
+	if _, err = os.Stat(filePath); os.IsNotExist(err) {
+		myFile.file, err = os.Create(filePath)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return myFile, err
 }
 

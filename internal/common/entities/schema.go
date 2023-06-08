@@ -1,6 +1,11 @@
 package entities
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/apache/arrow/go/v12/arrow"
 	"github.com/spaghettifunk/norman/internal/common/types"
 )
@@ -9,7 +14,7 @@ type Schema struct {
 	Name                string                `json:"name"`
 	DimensionFieldSpecs []*DimensionFieldSpec `json:"dimensionFieldSpecs"`
 	MetricFieldSpecs    []*MetricFieldSpec    `json:"metricFieldSpecs,omitempty"`
-	DateTimeFieldSpecs  []*DateTimeFieldSpec  `json:"dateTimeFieldSpecs"`
+	DateTimeFieldSpecs  *DateTimeFieldSpec    `json:"dateTimeFieldSpecs"`
 }
 
 type DimensionFieldSpec struct {
@@ -38,8 +43,21 @@ func (s *Schema) Validate(dt types.DataType) error {
 	return nil
 }
 
-// TODO: double check if it always work
-func (s *Schema) GetArrowSchema() *arrow.Schema {
+func (s *Schema) GetFullArrowSchema() (*arrow.Schema, error) {
+	// datetime cannot be null
+	if s.DateTimeFieldSpecs == nil {
+		return nil, fmt.Errorf("datetime field in schema cannot be null")
+	}
+
+	fields := []arrow.Field{}
+	fields = append(fields, s.GetDimensionFields()...)
+	fields = append(fields, s.GetMetricFields()...)
+	fields = append(fields, s.GetDatetimeField())
+
+	return arrow.NewSchema(fields, nil), nil
+}
+
+func (s *Schema) GetDimensionFields() []arrow.Field {
 	fields := []arrow.Field{}
 	for _, dimension := range s.DimensionFieldSpecs {
 		ty := types.GetDataType(dimension.DataType)
@@ -49,7 +67,11 @@ func (s *Schema) GetArrowSchema() *arrow.Schema {
 			Nullable: dimension.Nullable,
 		})
 	}
+	return fields
+}
 
+func (s *Schema) GetMetricFields() []arrow.Field {
+	fields := []arrow.Field{}
 	for _, metric := range s.MetricFieldSpecs {
 		ty := types.GetDataType(metric.DataType)
 		fields = append(fields, arrow.Field{
@@ -58,15 +80,37 @@ func (s *Schema) GetArrowSchema() *arrow.Schema {
 			Nullable: metric.Nullable,
 		})
 	}
+	return fields
+}
 
-	for _, dt := range s.DateTimeFieldSpecs {
-		ty := types.GetDataType(dt.DataType)
-		fields = append(fields, arrow.Field{
-			Name:     dt.Name,
-			Type:     ty.Typ,
-			Nullable: false,
-		})
+func (s *Schema) GetDatetimeField() arrow.Field {
+	ty := types.GetDataType(s.DateTimeFieldSpecs.DataType)
+	return arrow.Field{
+		Name:     s.DateTimeFieldSpecs.Name,
+		Type:     ty.Typ,
+		Nullable: false,
+	}
+}
+
+func (s *Schema) GetDatetimeFormat() {
+
+}
+
+func (s *Schema) GetGranularity() (int, time.Duration, error) {
+	granularityTokens := strings.Split(s.DateTimeFieldSpecs.Format, separator)
+	if len(granularityTokens) != granularityNumberOfTokens {
+		return 0, time.Hour, fmt.Errorf("wrong amount of tokens in string")
 	}
 
-	return arrow.NewSchema(fields, nil)
+	size, err := strconv.Atoi(granularityTokens[sizePosition])
+	if err != nil {
+		return 0, time.Hour, err
+	}
+
+	timeUnit, ok := durationMap[granularityTokens[timeUnitPosition]]
+	if !ok {
+		return 0, time.Hour, fmt.Errorf("wrong duration time unit. %s does not exist", granularityTokens[timeUnitPosition])
+	}
+
+	return size, timeUnit, nil
 }

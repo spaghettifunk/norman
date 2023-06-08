@@ -46,7 +46,11 @@ func (ijm *IngestionJobManager) Execute(config *cingestion.IngestionJobConfigura
 		return err
 	}
 	// get arrow schema
-	table.EventSchema = table.Schema.GetArrowSchema()
+	evSchema, err := table.Schema.GetFullArrowSchema()
+	if err != nil {
+		return err
+	}
+	table.EventSchema = evSchema
 
 	// create the actual job to be exectued
 	job, err := ingestion.NewJob(config, table)

@@ -2,8 +2,6 @@ package entities
 
 import (
 	"github.com/apache/arrow/go/v12/arrow"
-
-	"github.com/spaghettifunk/norman/internal/common/types"
 )
 
 type Table struct {
@@ -13,43 +11,25 @@ type Table struct {
 }
 
 func NewTable(name string, schema *Schema) (*Table, error) {
+	s, err := schema.GetFullArrowSchema()
+	if err != nil {
+		return nil, err
+	}
 	return &Table{
 		Name:        name,
 		Schema:      schema,
-		EventSchema: createEventSchema(schema),
+		EventSchema: s,
 	}, nil
 }
 
-func createEventSchema(schema *Schema) *arrow.Schema {
-	fields := []arrow.Field{}
+func (t *Table) GetDimensionFields() []arrow.Field {
+	return t.Schema.GetDimensionFields()
+}
 
-	for _, dimension := range schema.DimensionFieldSpecs {
-		ty := types.GetDataType(dimension.DataType)
-		fields = append(fields, arrow.Field{
-			Name:     dimension.Name,
-			Type:     ty.Typ,
-			Nullable: dimension.Nullable,
-		})
-	}
+func (t *Table) GetMetricFields() []arrow.Field {
+	return t.Schema.GetMetricFields()
+}
 
-	for _, metric := range schema.MetricFieldSpecs {
-		ty := types.GetDataType(metric.DataType)
-		fields = append(fields, arrow.Field{
-			Name:     metric.Name,
-			Type:     ty.Typ,
-			Nullable: metric.Nullable,
-		})
-	}
-
-	// datetime cannot be null
-	for _, dt := range schema.DateTimeFieldSpecs {
-		ty := types.GetDataType(dt.DataType)
-		fields = append(fields, arrow.Field{
-			Name:     dt.Name,
-			Type:     ty.Typ,
-			Nullable: false,
-		})
-	}
-
-	return arrow.NewSchema(fields, nil)
+func (t *Table) GetDatetimeField() arrow.Field {
+	return t.Schema.GetDatetimeField()
 }

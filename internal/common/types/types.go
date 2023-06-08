@@ -48,7 +48,7 @@ func GetDataType(tn string) DataType {
 	case Boolean:
 		return newDataType(tn, true, true, arrow.FixedWidthTypes.Boolean)
 	case Timestamp:
-		return newDataType(tn, true, true, arrow.FixedWidthTypes.Date64)
+		return newDataType(tn, true, true, arrow.PrimitiveTypes.Int64)
 	case String:
 		return newDataType(tn, false, true, arrow.BinaryTypes.String)
 	case JSON:

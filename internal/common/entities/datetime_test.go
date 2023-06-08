@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -24,8 +25,8 @@ func TestNewDateTimeFormatSpec(t *testing.T) {
 	// Valid SIMPLE_DATE_FORMAT format
 	format = "SIMPLE_DATE_FORMAT|yyyy-MM-dd|America/Los_Angeles"
 	expectedSpec = &DateTimeFormatSpec{
-		Size:        1,
-		UnitSpec:    time.Millisecond,
+		Size:        -1,
+		UnitSpec:    0,
 		PatternSpec: DateTimeFormatPatternSpec{Pattern: "yyyy-MM-dd", TimeZone: "America/Los_Angeles"},
 	}
 	spec, err = NewDateTimeFormatSpec(format)
@@ -40,7 +41,7 @@ func TestNewDateTimeFormatSpec(t *testing.T) {
 	format = "TIMESTAMP"
 	expectedSpec = &DateTimeFormatSpec{
 		Size:        1,
-		UnitSpec:    time.Millisecond,
+		UnitSpec:    0,
 		PatternSpec: DateTimeFormatPatternSpec{Pattern: "TIMESTAMP"},
 	}
 	spec, err = NewDateTimeFormatSpec(format)
@@ -62,10 +63,23 @@ func TestNewDateTimeFormatSpec(t *testing.T) {
 		t.Errorf("Unexpected error message: %v, expected: %v", err.Error(), expectedError)
 	}
 
-	format = "1:MILLISECONDS:EPOCH"
-	_, err = NewDateTimeFormatSpec(format)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+	var formats = []string{
+		"5:SECOND:EPOCH",
+		"350:MILLISECONDS:EPOCH",
+		"10:MINUTE:EPOCH",
+		"1:HOUR:EPOCH",
+		"12:SECOND:TIMESTAMP",
+		"4:MICROSECONDS:TIMESTAMP",
+		"3:NANOSECONDS:TIMESTAMP",
+	}
+	for _, format := range formats {
+		testname := fmt.Sprintf("format: %s", format)
+		t.Run(testname, func(t *testing.T) {
+			_, err = NewDateTimeFormatSpec(format)
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+		})
 	}
 }
 

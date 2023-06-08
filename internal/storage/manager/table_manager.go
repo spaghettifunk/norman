@@ -48,6 +48,11 @@ func NewTableManager(table *entities.Table) (*TableManager, error) {
 	// extract the datetime field
 	dtField := table.GetDatetimeField()
 
+	granularity, err := table.Schema.GetGranularity()
+	if err != nil {
+		return nil, err
+	}
+
 	// create the new record builder for inserting data to arrow file
 	mem := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	b := array.NewRecordBuilder(mem, table.EventSchema)
@@ -59,8 +64,7 @@ func NewTableManager(table *entities.Table) (*TableManager, error) {
 		baseDir:           baseDir,
 		wg:                sync.WaitGroup{},
 		partition:         0,
-		// TODO: this should come from configuration
-		interval: 5 * time.Minute,
+		interval:          time.Duration(granularity.Size) * granularity.UnitSpec,
 	}, nil
 }
 

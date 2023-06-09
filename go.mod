@@ -1,6 +1,6 @@
 module github.com/spaghettifunk/norman
 
-go 1.20
+go 1.19
 
 require (
 	github.com/Shopify/sarama v1.38.2-0.20230327141928-9127f1c432c0

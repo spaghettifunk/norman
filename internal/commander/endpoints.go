@@ -17,12 +17,11 @@ const (
 )
 
 func (c *Commander) APIVersion(ctx *fiber.Ctx) error {
-	ctx.Status(http.StatusOK).JSON(fiber.Map{
+	return ctx.Status(http.StatusOK).JSON(fiber.Map{
 		"API Name":    apiName,
 		"API Version": apiVersion,
 		"timestamp":   time.Now().Format("2006-01-02 15:04:05"),
 	})
-	return nil
 }
 
 /*
@@ -75,39 +74,34 @@ func (c *Commander) CreateJob(ctx *fiber.Ctx) error {
 
 	// parse config and transform into an IngestionJob
 	if err := cingestion.NewIngestionJob(&payload.Job); err != nil {
-		ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
+		return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to create ingestion job",
 			"error":   err.Error(),
 		})
-		return err
 	}
 
 	if err := c.consul.PutIngestionJobConfiguration(&payload.Job); err != nil {
-		ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
+		return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to save ingestion job into Consul",
 			"error":   err.Error(),
 		})
-		return err
 	}
 
 	// call gRPC function to trigger the ingestion job
 	req := &storage_v1.CreateIngestionJobRequest{JobID: payload.Job.ID.String()}
 	resp, err := c.storageGRPCClient.CreateIngestionJob(context.Background(), req)
 	if err != nil {
-		ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
+		return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to create ingestion job",
 			"error":   err.Error(),
 		})
-		return err
 	}
 
-	ctx.Status(http.StatusOK).JSON(fiber.Map{
+	return ctx.Status(http.StatusOK).JSON(fiber.Map{
 		"storageID": resp.StorageID,
 		"message":   resp.Message,
 		"timestamp": time.Now().Format("2006-01-02 15:04:05"),
 	})
-
-	return nil
 }
 
 func (c *Commander) UpdateJob(ctx *fiber.Ctx) error {
@@ -144,18 +138,15 @@ func (c *Commander) CreateTable(ctx *fiber.Ctx) error {
 	}
 
 	if err := c.consul.PutTableConfiguration(&payload.Table); err != nil {
-		ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
+		return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to create Table",
 			"error":   err.Error(),
 		})
-		return err
 	}
-	ctx.Status(http.StatusOK).JSON(fiber.Map{
+	return ctx.Status(http.StatusOK).JSON(fiber.Map{
 		"message":   "Table created successfully",
 		"timestamp": time.Now().Format("2006-01-02 15:04:05"),
 	})
-
-	return nil
 }
 
 func (c *Commander) UpdateTable(ctx *fiber.Ctx) error {

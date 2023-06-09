@@ -130,7 +130,11 @@ func (c *S3Client) UploadS3File(fileDir string, bucket *S3Bucket) error {
 	fileInfo, _ := file.Stat()
 	var size int64 = fileInfo.Size()
 	buffer := make([]byte, size)
-	file.Read(buffer)
+
+	_, err = file.Read(buffer)
+	if err != nil {
+		return err
+	}
 
 	// Config settings: this is where you choose the bucket, filename, content-type etc.
 	// of the file you're uploading.

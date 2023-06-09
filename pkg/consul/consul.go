@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
+	"github.com/rs/zerolog/log"
 	"github.com/spaghettifunk/norman/internal/common/entities"
 	cingestion "github.com/spaghettifunk/norman/internal/common/ingestion"
 
@@ -63,7 +64,9 @@ func (c *Consul) Start(s service.Service) error {
 		return err
 	}
 	// Initial run for TTL
-	c.Agent.PassTTL(fmt.Sprintf("service:%v", formattedID(s)), "TTL heartbeat")
+	if err := c.Agent.PassTTL(fmt.Sprintf("service:%v", formattedID(s)), "TTL heartbeat"); err != nil {
+		return err
+	}
 
 	// Begin TTL refresh
 	go c.Heartbeat(s)
@@ -252,10 +255,14 @@ func (c *Consul) Heartbeat(s service.Service) {
 	for range t.C {
 		select {
 		case <-c.heartBeatKill:
-			c.Stop(s)
+			if err := c.Stop(s); err != nil {
+				log.Error().Err(err)
+			}
 			return
 		default:
 		}
-		c.Agent.PassTTL(fmt.Sprintf("service:%v", formattedID(s)), "TTL heartbeat")
+		if err := c.Agent.PassTTL(fmt.Sprintf("service:%v", formattedID(s)), "TTL heartbeat"); err != nil {
+			log.Error().Err(err)
+		}
 	}
 }

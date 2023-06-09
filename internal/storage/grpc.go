@@ -30,7 +30,9 @@ func newgrpcServer(id string, cs *consul.Consul) (*grpcServer, error) {
 		return nil, err
 	}
 	// initialize job manager
-	m.Initialize()
+	if err := m.Initialize(); err != nil {
+		return nil, err
+	}
 
 	srv := &grpcServer{
 		storageID:           id,

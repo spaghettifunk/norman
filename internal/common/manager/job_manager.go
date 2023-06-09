@@ -59,12 +59,14 @@ func (ijm *IngestionJobManager) Execute(config *cingestion.IngestionJobConfigura
 	}
 
 	// Set initialization of the job
-	job.Initialize()
+	if err := job.Initialize(); err != nil {
+		return err
+	}
 
+	// add new task to the workerpool and wait until completion
+	ijm.wg.Add(1)
 	// TODO: looks really hacky!
 	go func() {
-		// add new task to the workerpool and wait until completion
-		ijm.wg.Add(1)
 		go func() {
 			ijm.WorkerPool.AddWork(job)
 			// Notify Consul that a new IngestionJob is in progress

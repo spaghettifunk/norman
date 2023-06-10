@@ -17,8 +17,8 @@ import (
 
 type TableManager struct {
 	Table             *entities.Table
-	datetimeFieldName string
 	baseDir           string
+	datetimeFieldName string
 	activeSegment     *segment.Segment
 	segments          []*segment.Segment
 	builder           *array.RecordBuilder
@@ -26,6 +26,7 @@ type TableManager struct {
 	partition         int32
 	partitionStart    time.Time
 	interval          time.Duration
+	granularity       *entities.GranularitySpec
 }
 
 var (
@@ -65,6 +66,7 @@ func NewTableManager(table *entities.Table) (*TableManager, error) {
 		wg:                sync.WaitGroup{},
 		partition:         0,
 		interval:          time.Duration(granularity.Size) * granularity.UnitSpec,
+		granularity:       granularity,
 	}, nil
 }
 
@@ -92,14 +94,14 @@ func (t *TableManager) InsertData(data []byte) error {
 
 	// initial partition time setup
 	if t.partitionStart.Equal(minTimestamp) {
-		t.partitionStart = eventTimestamp.Truncate(time.Minute)
+		t.partitionStart = eventTimestamp.Truncate(t.granularity.UnitSpec)
 	}
 
 	partitionInterval := t.partitionStart.Add(t.interval)
 
 	// if the interval is passed then it creates a new partition
 	if !(eventTimestamp.After(t.partitionStart) && eventTimestamp.Before(partitionInterval)) {
-		if err := t.flushSegment(); err != nil {
+		if err := t.FlushSegment(); err != nil {
 			return err
 		}
 		if err := t.CreateNewSegment(); err != nil {
@@ -107,7 +109,7 @@ func (t *TableManager) InsertData(data []byte) error {
 		}
 		// Update the current partition and its start time
 		t.partition++
-		t.partitionStart = eventTimestamp.Truncate(time.Minute)
+		t.partitionStart = eventTimestamp.Truncate(t.granularity.UnitSpec)
 	}
 
 	t.processEvent(event)
@@ -130,7 +132,7 @@ func (t *TableManager) processEvent(event map[string]interface{}) {
 // FlushSegment first persist on disk the current segment
 // secondly, it compresses the segment to save space and lastly
 // it reset the memory object so that it can start over
-func (t *TableManager) flushSegment() error {
+func (t *TableManager) FlushSegment() error {
 	record := t.builder.NewRecord()
 	if err := t.activeSegment.Flush(record); err != nil {
 		return err

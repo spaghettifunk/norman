@@ -83,7 +83,7 @@ func (t *TableManager) CreateNewSegment() error {
 }
 
 func (t *TableManager) InsertData(data []byte) error {
-	var event map[string]interface{}
+	event := make(map[string]interface{}, len(t.Table.EventSchema.Fields()))
 	if err := json.Unmarshal(data, &event); err != nil {
 		return err
 	}
@@ -124,8 +124,8 @@ func (t *TableManager) processEvent(event map[string]interface{}) {
 			log.Error().Msgf("could not find column %s in builder", field.Name)
 			continue
 		}
-		builder := t.builder.Field(idx)
-		t.appendValue(val, field, builder)
+		b := t.builder.Field(idx)
+		t.appendValue(val, field, b)
 	}
 }
 

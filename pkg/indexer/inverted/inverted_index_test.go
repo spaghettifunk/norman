@@ -49,6 +49,12 @@ func TestRetrieveIndex(t *testing.T) {
 	idx = ii.Search("first")
 	assert.Equal(t, 2, len(idx))
 
+	idx = ii.Search("first document")
+	assert.Equal(t, 2, len(idx))
+
+	idx = ii.Search("second document")
+	assert.Equal(t, 1, len(idx))
+
 	idx = ii.Search("apple")
 	assert.Nil(t, idx)
 }

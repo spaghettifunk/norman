@@ -75,21 +75,23 @@ func (i *InvertedIndex) intersection(a []uint32, b []uint32) []uint32 {
 
 // search queries the index for the given text.
 func (i *InvertedIndex) Search(text string) []uint32 {
-	var r []uint32
+	var r *roaring.Bitmap
 	for _, token := range i.analyze(text) {
 		if ids, ok := i.index[token]; ok {
 			if r == nil {
+				r = roaring.NewBitmap()
 				iterator := ids.Iterator()
 				for iterator.HasNext() {
-					r = append(r, iterator.Next())
+					r.Add(iterator.Next())
 				}
 			} else {
-				r = i.intersection(r, ids.ToArray())
+				// run intersection
+				r = roaring.ParAnd(0, r, ids)
 			}
 		} else {
 			// Token doesn't exist.
 			return nil
 		}
 	}
-	return r
+	return r.ToArray()
 }

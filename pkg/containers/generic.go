@@ -1,3 +1,4 @@
+// Credits to: https://github.com/zyedidia/generic
 package containers
 
 import (

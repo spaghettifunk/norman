@@ -1,3 +1,4 @@
+// Credits to: https://github.com/zyedidia/generic
 // Package mapset provides an implementation of a set using the built-in map.
 package mapset
 

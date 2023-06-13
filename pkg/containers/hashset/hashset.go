@@ -1,3 +1,4 @@
+// Credits to: https://github.com/zyedidia/generic
 // Package hashset provides an implementation of a hashset.
 package hashset
 

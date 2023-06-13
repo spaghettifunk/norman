@@ -1,3 +1,4 @@
+// Credits to: https://github.com/zyedidia/generic
 // Package hashmap provides an implementation of a hashmap. The map uses linear
 // probing and automatically resizes. The map can also be efficiently copied,
 // and will perform copies lazily, using copy-on-write. However, the

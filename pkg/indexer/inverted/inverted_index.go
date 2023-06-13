@@ -50,30 +50,7 @@ func (i *InvertedIndex) Build(id uuid.UUID, document string) bool {
 	return true
 }
 
-// intersection returns the set intersection between a and b.
-// a and b have to be sorted in ascending order and contain no duplicates.
-func (i *InvertedIndex) intersection(a []uint32, b []uint32) []uint32 {
-	maxLen := len(a)
-	if len(b) > maxLen {
-		maxLen = len(b)
-	}
-	r := make([]uint32, 0, maxLen)
-	var k, j int
-	for k < len(a) && j < len(b) {
-		if a[k] < b[j] {
-			k++
-		} else if a[k] > b[j] {
-			j++
-		} else {
-			r = append(r, a[k])
-			k++
-			j++
-		}
-	}
-	return r
-}
-
-// search queries the index for the given text.
+// Search queries the index for the given text.
 func (i *InvertedIndex) Search(text string) []uint32 {
 	var r *roaring.Bitmap
 	for _, token := range i.analyze(text) {

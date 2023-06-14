@@ -1,4 +1,4 @@
-package invertedindex
+package textinvertedindex
 
 import (
 	"encoding/binary"
@@ -8,20 +8,20 @@ import (
 	"github.com/spaghettifunk/norman/pkg/containers/mapset"
 )
 
-type InvertedIndex struct {
+type TextInvertedIndex struct {
 	index     map[string]*roaring.Bitmap
 	stopWords mapset.Set[string]
 }
 
-// NewInvertedIndex creates a new InvertedIndex object
+// NewTextInvertedIndex creates a new InvertedIndex object
 // English is the only language supported
-func NewInvertedIndex() *InvertedIndex {
+func NewTextInvertedIndex() *TextInvertedIndex {
 	stopWords := mapset.New[string]()
 	for _, sw := range stopWordsEN {
 		stopWords.Put(sw)
 	}
 
-	return &InvertedIndex{
+	return &TextInvertedIndex{
 		index:     make(map[string]*roaring.Bitmap, 1_000),
 		stopWords: stopWords,
 	}
@@ -29,7 +29,7 @@ func NewInvertedIndex() *InvertedIndex {
 
 // Build builds the inverted index
 // id is a UUID as string
-func (i *InvertedIndex) Build(id uuid.UUID, document string) bool {
+func (i *TextInvertedIndex) Build(id uuid.UUID, document string) bool {
 	tokens := i.analyze(document)
 	visited := make(map[string]bool, len(tokens))
 
@@ -51,7 +51,7 @@ func (i *InvertedIndex) Build(id uuid.UUID, document string) bool {
 }
 
 // Search queries the index for the given text.
-func (i *InvertedIndex) Search(text string) []uint32 {
+func (i *TextInvertedIndex) Search(text string) []uint32 {
 	var r *roaring.Bitmap
 	for _, token := range i.analyze(text) {
 		if ids, ok := i.index[token]; ok {

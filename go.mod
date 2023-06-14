@@ -3,6 +3,7 @@ module github.com/spaghettifunk/norman
 go 1.19
 
 require (
+	github.com/RoaringBitmap/roaring v1.3.0
 	github.com/Shopify/sarama v1.38.2-0.20230327141928-9127f1c432c0
 	github.com/aws/aws-sdk-go v1.44.273
 	github.com/fsnotify/fsnotify v1.6.0
@@ -10,8 +11,10 @@ require (
 	github.com/gofiber/swagger v0.1.12
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/consul/api v1.20.0
+	github.com/kljensen/snowball v0.8.0
 	github.com/rs/zerolog v1.29.1
 	github.com/stretchr/testify v1.8.4
+	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	google.golang.org/grpc v1.55.0
 	google.golang.org/protobuf v1.30.0
 )
@@ -19,7 +22,6 @@ require (
 require (
 	github.com/JohnCGriffin/overflow v0.0.0-20211019200055-46fa312c352c // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
-	github.com/RoaringBitmap/roaring v1.3.0 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/apache/thrift v0.18.1 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
@@ -57,7 +59,6 @@ require (
 	github.com/klauspost/asmfmt v1.3.2 // indirect
 	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
-	github.com/kljensen/snowball v0.8.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -88,7 +89,6 @@ require (
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	golang.org/x/crypto v0.9.0 // indirect
-	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sync v0.2.0 // indirect

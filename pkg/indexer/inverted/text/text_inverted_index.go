@@ -1,8 +1,6 @@
 package textinvertedindex
 
 import (
-	"encoding/binary"
-
 	"github.com/RoaringBitmap/roaring"
 	"github.com/google/uuid"
 	"github.com/spaghettifunk/norman/pkg/containers/mapset"
@@ -13,9 +11,9 @@ type TextInvertedIndex struct {
 	stopWords mapset.Set[string]
 }
 
-// NewTextInvertedIndex creates a new InvertedIndex object
+// New creates a new Text InvertedIndex object
 // English is the only language supported
-func NewTextInvertedIndex() *TextInvertedIndex {
+func New() *TextInvertedIndex {
 	stopWords := mapset.New[string]()
 	for _, sw := range stopWordsEN {
 		stopWords.Put(sw)
@@ -44,7 +42,7 @@ func (i *TextInvertedIndex) Build(id uuid.UUID, document string) bool {
 			i.index[word] = rb
 		}
 
-		rb.Add(binary.BigEndian.Uint32(id[:]))
+		rb.Add(id.ID())
 		visited[word] = true
 	}
 	return true

@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewInvertedIndex(t *testing.T) {
-	ii := NewTextInvertedIndex()
+	ii := New()
 	assert.NotNil(t, ii)
 }
 
@@ -19,7 +19,7 @@ func TestBuildInvertedIndex(t *testing.T) {
 	documents[uuid.New()] = "And this is the third one."
 	documents[uuid.New()] = "Is this the first document?"
 
-	ii := NewTextInvertedIndex()
+	ii := New()
 	assert.NotNil(t, ii)
 
 	for id, doc := range documents {
@@ -35,7 +35,7 @@ func TestRetrieveIndex(t *testing.T) {
 	documents[uuid.New()] = "And this is the third one."
 	documents[uuid.New()] = "Is this the first document?"
 
-	ii := NewTextInvertedIndex()
+	ii := New()
 	assert.NotNil(t, ii)
 
 	for id, doc := range documents {

@@ -117,16 +117,24 @@ func (t *TableManager) InsertData(data []byte) error {
 	return nil
 }
 
-func (t *TableManager) processEvent(event map[string]interface{}) {
+// this is processed concurrently considering that there can be hundreds of columns per event
+func (t *TableManager) processEvent(event map[string]interface{}) {	
+	t.wg.Add(len(event))
+
 	for idx, field := range t.builder.Schema().Fields() {
-		val, ok := event[field.Name]
-		if !ok {
-			log.Error().Msgf("could not find column %s in builder", field.Name)
-			continue
-		}
-		b := t.builder.Field(idx)
-		t.appendValue(val, field, b)
+		go func(i int, f arrow.Field) {
+			defer t.wg.Done()
+			val, ok := event[f.Name]
+			if !ok {
+				log.Error().Msgf("could not find column %s in builder", f.Name)
+				return
+			}
+			b := t.builder.Field(i)
+			t.appendValue(val, f, b)
+		}(idx, field)
 	}
+
+	t.wg.Wait()
 }
 
 // FlushSegment first persist on disk the current segment

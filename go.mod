@@ -11,6 +11,7 @@ require (
 	github.com/gofiber/swagger v0.1.12
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/consul/api v1.20.0
+	github.com/kelindar/bitmap v1.5.0
 	github.com/kljensen/snowball v0.8.0
 	github.com/rs/zerolog v1.29.1
 	github.com/stretchr/testify v1.8.4
@@ -56,7 +57,6 @@ require (
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/kelindar/bitmap v1.5.0 // indirect
 	github.com/kelindar/simd v1.1.2 // indirect
 	github.com/klauspost/asmfmt v1.3.2 // indirect
 	github.com/klauspost/compress v1.16.5 // indirect

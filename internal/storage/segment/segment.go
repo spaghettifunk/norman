@@ -1,6 +1,7 @@
 package segment
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -60,10 +61,18 @@ func (s *Segment) Flush(record arrow.Record) error {
 	defer s.mu.Unlock()
 
 	// closable
-	defer s.pFile.Close()
-	defer s.writer.Close()
+	var err error
+	defer func() {
+		err = errors.Join(err, s.pFile.Close())
+	}()
+
+	defer func() {
+		err = errors.Join(err, s.writer.Close())
+	}()
+
 	defer record.Release()
 
 	// write arrow file
-	return s.writer.WriteBuffered(record)
+	err = errors.Join(s.writer.WriteBuffered(record))
+	return err
 }

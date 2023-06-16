@@ -118,7 +118,7 @@ func (t *TableManager) InsertData(data []byte) error {
 }
 
 // this is processed concurrently considering that there can be hundreds of columns per event
-func (t *TableManager) processEvent(event map[string]interface{}) {	
+func (t *TableManager) processEvent(event map[string]interface{}) {
 	t.wg.Add(len(event))
 
 	for idx, field := range t.builder.Schema().Fields() {

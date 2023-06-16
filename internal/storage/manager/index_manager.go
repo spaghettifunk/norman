@@ -3,6 +3,8 @@ package manager
 import (
 	"fmt"
 
+	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 	"github.com/spaghettifunk/norman/pkg/indexer"
 	bitmapindex "github.com/spaghettifunk/norman/pkg/indexer/bitmap"
 	textinvertedindex "github.com/spaghettifunk/norman/pkg/indexer/inverted/text"
@@ -49,6 +51,8 @@ func (m *IndexManager[T]) AddIndex(columnName string, indexType IndexType) error
 		m.SortedIndexes[columnName] = sortedindex.New[T]()
 	case StarTreeIndex:
 		m.StarTreeIndexes[columnName] = startreeindex.New[T]()
+	default:
+		return fmt.Errorf("wrong index type %s", indexType)
 	}
 	return nil
 }
@@ -59,4 +63,41 @@ func (m *IndexManager[T]) indexExists(columnName string) bool {
 		m.RangeIndexes[columnName] != nil ||
 		m.SortedIndexes[columnName] != nil ||
 		m.StarTreeIndexes[columnName] != nil
+}
+
+func (m *IndexManager[T]) BuildIndex(columnName string, indexType IndexType, id uuid.UUID, value interface{}) bool {
+	switch indexType {
+	case TextInvertedIndex:
+		return m.TextInvertedIndexes[columnName].Build(id, value.(string))
+	case BitmapIndex:
+		return m.BitmapIndexes[columnName].Build(id, value.(T))
+	case RangeIndex:
+		return m.RangeIndexes[columnName].Build(id, value.(T))
+	case SortedIndex:
+		return m.SortedIndexes[columnName].Build(id, value.(T))
+	case StarTreeIndex:
+		return m.StarTreeIndexes[columnName].Build(id, value.(T))
+	default:
+		log.Error().Msgf("wrong index type %s", indexType)
+		return false
+	}
+}
+
+func (m *IndexManager[T]) QueryIndex(columnName string, indexType IndexType, value interface{}) ([]uint32, error) {
+	var idx []uint32
+	switch indexType {
+	case TextInvertedIndex:
+		idx = m.TextInvertedIndexes[columnName].Search(value.(string))
+	case BitmapIndex:
+		idx = m.BitmapIndexes[columnName].Search(value.(T))
+	case RangeIndex:
+		idx = m.RangeIndexes[columnName].Search(value.(T))
+	case SortedIndex:
+		idx = m.SortedIndexes[columnName].Search(value.(T))
+	case StarTreeIndex:
+		idx = m.StarTreeIndexes[columnName].Search(value.(T))
+	default:
+		return nil, fmt.Errorf("wrong index type %s", indexType)
+	}
+	return idx, nil
 }

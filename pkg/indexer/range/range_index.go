@@ -19,3 +19,7 @@ func New[T indexer.ValidTypes]() *RangeIndex[T] {
 func (i *RangeIndex[T]) Build(id uuid.UUID, value T) bool {
 	return true
 }
+
+func (i *RangeIndex[T]) Search(value T) []uint32 {
+	return nil
+}

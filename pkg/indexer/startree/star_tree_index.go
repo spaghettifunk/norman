@@ -36,6 +36,10 @@ func (st *StarTreeNode[T]) Build(id uuid.UUID, value T) bool {
 	return true
 }
 
+func (s *StarTreeNode[T]) Search(value T) []uint32 {
+	return nil
+}
+
 func (n *StarTreeNode[T]) ProcessEvent(node *StarTreeNode[T], event map[string]interface{}, dimensions []string, level int) {
 	if level == len(dimensions)-1 {
 		// Leaf level, update the aggregated value

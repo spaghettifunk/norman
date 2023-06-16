@@ -15,3 +15,7 @@ func New[T indexer.ValidTypes]() *SortedIndex[T] {
 func (i *SortedIndex[T]) Build(id uuid.UUID, value T) bool {
 	return true
 }
+
+func (i *SortedIndex[T]) Search(value T) []uint32 {
+	return nil
+}

@@ -33,7 +33,7 @@ func NewIndexManager[T indexer.ValidTypes]() *IndexManager[T] {
 	return &IndexManager[T]{}
 }
 
-func (m *IndexManager[T]) AddIndex(columnName string, indexType IndexType) error { 
+func (m *IndexManager[T]) AddIndex(columnName string, indexType IndexType) error {
 	if m.indexExists(columnName) {
 		return fmt.Errorf("index already existing for column %s", columnName)
 	}

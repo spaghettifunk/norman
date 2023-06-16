@@ -188,6 +188,10 @@ github.com/spaghettifunk/norman/pkg/indexer/inverted/text/text_inverted_index.go
 github.com/spaghettifunk/norman/pkg/indexer/inverted/text/tokenizer.go:9.60,10.52 1 13
 github.com/spaghettifunk/norman/pkg/indexer/inverted/text/tokenizer.go:10.52,13.3 1 281
 github.com/spaghettifunk/norman/pkg/indexer/inverted/text/tokenizer.go:17.59,23.2 5 13
+github.com/spaghettifunk/norman/pkg/indexer/range/range_index.go:13.49,17.2 1 1
+github.com/spaghettifunk/norman/pkg/indexer/range/range_index.go:19.59,21.2 1 0
+github.com/spaghettifunk/norman/pkg/indexer/sorted/sorted_index.go:11.50,13.2 1 1
+github.com/spaghettifunk/norman/pkg/indexer/sorted/sorted_index.go:15.60,17.2 1 0
 github.com/spaghettifunk/norman/pkg/indexer/startree/star_tree_index.go:26.51,33.2 1 0
 github.com/spaghettifunk/norman/pkg/indexer/startree/star_tree_index.go:35.62,37.2 1 0
 github.com/spaghettifunk/norman/pkg/indexer/startree/star_tree_index.go:39.125,40.32 1 0
@@ -202,10 +206,6 @@ github.com/spaghettifunk/norman/pkg/indexer/startree/star_tree_index.go:59.76,61
 github.com/spaghettifunk/norman/pkg/indexer/startree/star_tree_index.go:66.2,66.18 1 0
 github.com/spaghettifunk/norman/pkg/indexer/startree/star_tree_index.go:66.18,75.3 2 0
 github.com/spaghettifunk/norman/pkg/indexer/startree/star_tree_index.go:78.2,78.51 1 0
-github.com/spaghettifunk/norman/pkg/indexer/range/range_index.go:13.49,17.2 1 1
-github.com/spaghettifunk/norman/pkg/indexer/range/range_index.go:19.59,21.2 1 0
-github.com/spaghettifunk/norman/pkg/indexer/sorted/sorted_index.go:11.50,13.2 1 1
-github.com/spaghettifunk/norman/pkg/indexer/sorted/sorted_index.go:15.60,17.2 1 0
 github.com/spaghettifunk/norman/pkg/workerpool/workerpool.go:43.67,44.21 1 7
 github.com/spaghettifunk/norman/pkg/workerpool/workerpool.go:44.21,46.3 1 2
 github.com/spaghettifunk/norman/pkg/workerpool/workerpool.go:47.2,47.21 1 5

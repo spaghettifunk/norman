@@ -1,60 +1,56 @@
 package startreeindex
 
 import (
-	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
-	"github.com/spaghettifunk/norman/pkg/indexer"
+	"fmt"
+
+	"golang.org/x/exp/constraints"
 )
 
 type AggregationType string
+
+type ValidTypes interface {
+	constraints.Float | constraints.Integer
+}
 
 const (
 	Sum     AggregationType = "SUM"
 	Average AggregationType = "AVERAGE"
 )
 
-type StarTreeNode[T indexer.ValidTypes] struct {
+type StarTreeNode[T ValidTypes] struct {
 	Level           int
 	Dimension       string
 	DimensionValue  T
 	AggregatedValue T
-	AggregationType
-	Children []*StarTreeNode[T]
+	AggregationType AggregationType
+	Children        []*StarTreeNode[T]
 }
 
 // New initialize the root node
-func New[T indexer.ValidTypes]() *StarTreeNode[T] {
+func New[T ValidTypes]() *StarTreeNode[T] {
 	return &StarTreeNode[T]{
 		Level:           0,
 		Dimension:       "root",
-		AggregatedValue: 0.0,
+		DimensionValue:  0,
+		AggregatedValue: 0,
 		Children:        []*StarTreeNode[T]{},
 	}
 }
 
-func (st *StarTreeNode[T]) Build(id uuid.UUID, value T) bool {
-	return true
-}
-
-func (s *StarTreeNode[T]) Search(value T) []uint32 {
-	return nil
-}
-
-func (n *StarTreeNode[T]) ProcessEvent(node *StarTreeNode[T], event map[string]interface{}, dimensions []string, level int) {
+func (n *StarTreeNode[T]) ProcessEvent(node *StarTreeNode[T], event map[string]interface{}, dimensions []string, level int) error {
 	if level == len(dimensions)-1 {
 		// Leaf level, update the aggregated value
 		if val, ok := event[dimensions[level]].(T); ok {
 			// TODO: change this with the type of aggreagtion we want to support
 			node.AggregatedValue += val
 		}
-		return
+		return nil
 	}
 
 	currentDimension := dimensions[level+1]
 	dimensionValue, ok := event[currentDimension].(T)
 	if !ok {
-		log.Error().Msgf("couldn't retried value for dimension %s in event", currentDimension)
-		return
+		return fmt.Errorf("couldn't retried value for dimension %s in event", currentDimension)
 	}
 
 	// Find the child node corresponding to the dimension value
@@ -79,5 +75,5 @@ func (n *StarTreeNode[T]) ProcessEvent(node *StarTreeNode[T], event map[string]i
 	}
 
 	// Recursively process the child node
-	n.ProcessEvent(child, event, dimensions, level+1)
+	return n.ProcessEvent(child, event, dimensions, level+1)
 }

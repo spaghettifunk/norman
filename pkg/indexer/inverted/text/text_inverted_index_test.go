@@ -3,23 +3,22 @@ package textinvertedindex
 import (
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewInvertedIndex(t *testing.T) {
-	ii := New()
+	ii := New("dimension-a")
 	assert.NotNil(t, ii)
 }
 
 func TestBuildInvertedIndex(t *testing.T) {
-	documents := make(map[uuid.UUID]string)
-	documents[uuid.New()] = "This is the first document."
-	documents[uuid.New()] = "This document is the second document."
-	documents[uuid.New()] = "And this is the third one."
-	documents[uuid.New()] = "Is this the first document?"
+	documents := make(map[string]string)
+	documents["event-1"] = "This is the first document."
+	documents["event-2"] = "This document is the second document."
+	documents["event-3"] = "And this is the third one."
+	documents["event-4"] = "Is this the first document?"
 
-	ii := New()
+	ii := New("dimension-a")
 	assert.NotNil(t, ii)
 
 	for id, doc := range documents {
@@ -29,13 +28,13 @@ func TestBuildInvertedIndex(t *testing.T) {
 }
 
 func TestRetrieveIndex(t *testing.T) {
-	documents := make(map[uuid.UUID]string)
-	documents[uuid.New()] = "This is the first document."
-	documents[uuid.New()] = "This document is the second document."
-	documents[uuid.New()] = "And this is the third one."
-	documents[uuid.New()] = "Is this the first document?"
+	documents := make(map[string]string)
+	documents["event-1"] = "This is the first document."
+	documents["event-2"] = "This document is the second document."
+	documents["event-3"] = "And this is the third one."
+	documents["event-4"] = "Is this the first document?"
 
-	ii := New()
+	ii := New("dimension-a")
 	assert.NotNil(t, ii)
 
 	for id, doc := range documents {

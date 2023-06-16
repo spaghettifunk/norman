@@ -1,21 +1,23 @@
 package sortedindex
 
-import (
-	"github.com/google/uuid"
-	"github.com/spaghettifunk/norman/pkg/indexer"
-)
-
-type SortedIndex[T indexer.ValidTypes] struct {
+type SortedIndex struct {
+	columnName string
 }
 
-func New[T indexer.ValidTypes]() *SortedIndex[T] {
-	return &SortedIndex[T]{}
+func New(columnName string) *SortedIndex {
+	return &SortedIndex{
+		columnName: columnName,
+	}
 }
 
-func (i *SortedIndex[T]) Build(id uuid.UUID, value T) bool {
+func (i *SortedIndex) Build(id string, value interface{}) bool {
 	return true
 }
 
-func (i *SortedIndex[T]) Search(value T) []uint32 {
+func (i *SortedIndex) Search(value interface{}) []uint32 {
 	return nil
+}
+
+func (i *SortedIndex) GetColumnName() string {
+	return i.columnName
 }

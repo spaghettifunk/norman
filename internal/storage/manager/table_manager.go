@@ -1,8 +1,10 @@
 package manager
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -15,6 +17,10 @@ import (
 	"github.com/spaghettifunk/norman/internal/storage/segment"
 )
 
+const (
+	eventIDName string = "_normanID"
+)
+
 type TableManager struct {
 	Table             *entities.Table
 	baseDir           string
@@ -23,15 +29,20 @@ type TableManager struct {
 	segments          []*segment.Segment
 	builder           *array.RecordBuilder
 	wg                sync.WaitGroup
-	partition         int32
+	partition         int
 	partitionStart    time.Time
 	interval          time.Duration
 	granularity       *entities.GranularitySpec
+	eventsCounter     int
 }
 
 var (
 	minTimestamp = time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
 )
+
+var buffPool = sync.Pool{
+	New: func() interface{} { return new(bytes.Buffer) },
+}
 
 func NewTableManager(table *entities.Table) (*TableManager, error) {
 	// TODO: this should depend on a folder that comes from Configuration
@@ -67,6 +78,7 @@ func NewTableManager(table *entities.Table) (*TableManager, error) {
 		partition:         0,
 		interval:          time.Duration(granularity.Size) * granularity.UnitSpec,
 		granularity:       granularity,
+		eventsCounter:     0,
 	}, nil
 }
 
@@ -99,6 +111,9 @@ func (t *TableManager) InsertData(data []byte) error {
 
 	partitionInterval := t.partitionStart.Add(t.interval)
 
+	// add norman ID to the event
+	event[eventIDName] = t.generateEventID(partitionInterval)
+
 	// if the interval is passed then it creates a new partition
 	if !(eventTimestamp.After(t.partitionStart) && eventTimestamp.Before(partitionInterval)) {
 		if err := t.FlushSegment(); err != nil {
@@ -113,28 +128,40 @@ func (t *TableManager) InsertData(data []byte) error {
 	}
 
 	t.processEvent(event)
+	t.eventsCounter++
 
 	return nil
 }
 
+func (t *TableManager) generateEventID(partitionInterval time.Time) string {
+	bf := buffPool.Get().(*bytes.Buffer)
+	defer buffPool.Put(bf)
+	bf.Reset()
+
+	bf.WriteString(t.Table.Name)
+	bf.WriteString("_P")
+	bf.WriteString(strconv.Itoa(t.partition))
+	bf.WriteByte('_')
+	bf.WriteString(t.partitionStart.Format("2006-01-02T15:04:05:00"))
+	bf.WriteByte('_')
+	bf.WriteString(partitionInterval.Format("2006-01-02T15:04:05:00"))
+	bf.WriteByte('_')
+	bf.WriteString(strconv.Itoa(t.eventsCounter))
+
+	return bf.String()
+}
+
 // this is processed concurrently considering that there can be hundreds of columns per event
 func (t *TableManager) processEvent(event map[string]interface{}) {
-	t.wg.Add(len(event))
-
 	for idx, field := range t.builder.Schema().Fields() {
-		go func(i int, f arrow.Field) {
-			defer t.wg.Done()
-			val, ok := event[f.Name]
-			if !ok {
-				log.Error().Msgf("could not find column %s in builder", f.Name)
-				return
-			}
-			b := t.builder.Field(i)
-			t.appendValue(val, f, b)
-		}(idx, field)
+		val, ok := event[field.Name]
+		if !ok {
+			log.Error().Msgf("could not find column %s in builder", field.Name)
+			return
+		}
+		b := t.builder.Field(idx)
+		t.appendValue(val, field, b)
 	}
-
-	t.wg.Wait()
 }
 
 // FlushSegment first persist on disk the current segment

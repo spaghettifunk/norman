@@ -2,18 +2,19 @@ package textinvertedindex
 
 import (
 	"github.com/RoaringBitmap/roaring"
-	"github.com/google/uuid"
+	"github.com/segmentio/fasthash/fnv1a"
 	"github.com/spaghettifunk/norman/pkg/containers/mapset"
 )
 
 type TextInvertedIndex struct {
-	index     map[string]*roaring.Bitmap
-	stopWords mapset.Set[string]
+	columnName string
+	index      map[string]*roaring.Bitmap
+	stopWords  mapset.Set[string]
 }
 
 // New creates a new Text InvertedIndex object
 // English is the only language supported
-func New() *TextInvertedIndex {
+func New(columnName string) *TextInvertedIndex {
 	stopWords := mapset.New[string]()
 	for _, sw := range stopWordsEN {
 		stopWords.Put(sw)
@@ -27,8 +28,8 @@ func New() *TextInvertedIndex {
 
 // Build builds the inverted index
 // id is a UUID as string
-func (i *TextInvertedIndex) Build(id uuid.UUID, document string) bool {
-	tokens := i.analyze(document)
+func (i *TextInvertedIndex) Build(id string, document interface{}) bool {
+	tokens := i.analyze(document.(string))
 	visited := make(map[string]bool, len(tokens))
 
 	for _, word := range tokens {
@@ -42,14 +43,15 @@ func (i *TextInvertedIndex) Build(id uuid.UUID, document string) bool {
 			i.index[word] = rb
 		}
 
-		rb.Add(id.ID())
+		rb.Add(fnv1a.HashString32(id))
 		visited[word] = true
 	}
 	return true
 }
 
 // Search queries the index for the given text.
-func (i *TextInvertedIndex) Search(text string) []uint32 {
+func (i *TextInvertedIndex) Search(value interface{}) []uint32 {
+	text := value.(string)
 	var r *roaring.Bitmap
 	for _, token := range i.analyze(text) {
 		if ids, ok := i.index[token]; ok {
@@ -69,4 +71,8 @@ func (i *TextInvertedIndex) Search(text string) []uint32 {
 		}
 	}
 	return r.ToArray()
+}
+
+func (i *TextInvertedIndex) GetColumnName() string {
+	return i.columnName
 }

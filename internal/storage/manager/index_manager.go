@@ -1,103 +1,111 @@
 package manager
 
 import (
+	"encoding/binary"
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
 
-	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 	"github.com/spaghettifunk/norman/pkg/indexer"
+
 	bitmapindex "github.com/spaghettifunk/norman/pkg/indexer/bitmap"
 	textinvertedindex "github.com/spaghettifunk/norman/pkg/indexer/inverted/text"
 	rangeindex "github.com/spaghettifunk/norman/pkg/indexer/range"
 	sortedindex "github.com/spaghettifunk/norman/pkg/indexer/sorted"
-	startreeindex "github.com/spaghettifunk/norman/pkg/indexer/startree"
 )
 
 type IndexType string
 
 const (
+	indexFileName     string    = "indexes.norman"
 	TextInvertedIndex IndexType = "TEXT_INVERTED_INDEX"
 	BitmapIndex       IndexType = "BITMAP_INDEX"
 	RangeIndex        IndexType = "RANGE_INDEX"
 	SortedIndex       IndexType = "SORTED_INDEX"
-	StarTreeIndex     IndexType = "STARTREE_INDEX"
 )
 
-type IndexManager[T indexer.ValidTypes] struct {
-	TextInvertedIndexes map[string]*textinvertedindex.TextInvertedIndex
-	BitmapIndexes       map[string]*bitmapindex.BitmapIndex[T]
-	RangeIndexes        map[string]*rangeindex.RangeIndex[T]
-	SortedIndexes       map[string]*sortedindex.SortedIndex[T]
-	StarTreeIndexes     map[string]*startreeindex.StarTreeNode[T]
+type IndexManager struct {
+	directory string
+	Indexes   map[string]indexer.Indexer
+	file      *os.File
+	mu        sync.Mutex
 }
 
-func NewIndexManager[T indexer.ValidTypes]() *IndexManager[T] {
-	return &IndexManager[T]{}
+func NewIndexManager(dir string) *IndexManager {
+	return &IndexManager{
+		directory: dir,
+		Indexes:   make(map[string]indexer.Indexer, 10),
+	}
 }
 
-func (m *IndexManager[T]) AddIndex(columnName string, indexType IndexType) error {
-	if m.indexExists(columnName) {
+func (m *IndexManager) AddIndex(columnName string, indexType IndexType) error {
+	if m.Indexes[columnName] != nil {
 		return fmt.Errorf("index already existing for column %s", columnName)
 	}
 
 	switch indexType {
 	case TextInvertedIndex:
-		m.TextInvertedIndexes[columnName] = textinvertedindex.New()
+		m.Indexes[columnName] = textinvertedindex.New(columnName)
 	case BitmapIndex:
-		m.BitmapIndexes[columnName] = bitmapindex.New[T]()
+		m.Indexes[columnName] = bitmapindex.New(columnName)
 	case RangeIndex:
-		m.RangeIndexes[columnName] = rangeindex.New[T]()
+		m.Indexes[columnName] = rangeindex.New(columnName)
 	case SortedIndex:
-		m.SortedIndexes[columnName] = sortedindex.New[T]()
-	case StarTreeIndex:
-		m.StarTreeIndexes[columnName] = startreeindex.New[T]()
+		m.Indexes[columnName] = sortedindex.New(columnName)
 	default:
 		return fmt.Errorf("wrong index type %s", indexType)
 	}
 	return nil
 }
 
-func (m *IndexManager[T]) indexExists(columnName string) bool {
-	return m.TextInvertedIndexes[columnName] != nil ||
-		m.BitmapIndexes[columnName] != nil ||
-		m.RangeIndexes[columnName] != nil ||
-		m.SortedIndexes[columnName] != nil ||
-		m.StarTreeIndexes[columnName] != nil
+func (m *IndexManager) BuildIndex(columnName string, id string, value interface{}) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.Indexes[columnName].Build(id, value)
 }
 
-func (m *IndexManager[T]) BuildIndex(columnName string, indexType IndexType, id uuid.UUID, value interface{}) bool {
-	switch indexType {
-	case TextInvertedIndex:
-		return m.TextInvertedIndexes[columnName].Build(id, value.(string))
-	case BitmapIndex:
-		return m.BitmapIndexes[columnName].Build(id, value.(T))
-	case RangeIndex:
-		return m.RangeIndexes[columnName].Build(id, value.(T))
-	case SortedIndex:
-		return m.SortedIndexes[columnName].Build(id, value.(T))
-	case StarTreeIndex:
-		return m.StarTreeIndexes[columnName].Build(id, value.(T))
-	default:
-		log.Error().Msgf("wrong index type %s", indexType)
-		return false
-	}
+func (m *IndexManager) QueryIndex(columnName string, value interface{}) []uint32 {
+	return m.Indexes[columnName].Search(value)
 }
 
-func (m *IndexManager[T]) QueryIndex(columnName string, indexType IndexType, value interface{}) ([]uint32, error) {
-	var idx []uint32
-	switch indexType {
-	case TextInvertedIndex:
-		idx = m.TextInvertedIndexes[columnName].Search(value.(string))
-	case BitmapIndex:
-		idx = m.BitmapIndexes[columnName].Search(value.(T))
-	case RangeIndex:
-		idx = m.RangeIndexes[columnName].Search(value.(T))
-	case SortedIndex:
-		idx = m.SortedIndexes[columnName].Search(value.(T))
-	case StarTreeIndex:
-		idx = m.StarTreeIndexes[columnName].Search(value.(T))
-	default:
-		return nil, fmt.Errorf("wrong index type %s", indexType)
+func (m *IndexManager) PersistToDisk() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Create the directory if it doesn't exist
+	if err := os.MkdirAll(m.directory, os.ModePerm); err != nil {
+		return err
 	}
-	return idx, nil
+
+	// Create the file if it doesn't exist
+	filePath := filepath.Join(m.directory, indexFileName)
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		if m.file, err = os.Create(filePath); err != nil {
+			return err
+		}
+		defer func() {
+			err = errors.Join(err, m.file.Close())
+		}()
+	}
+
+	return binary.Write(m.file, binary.BigEndian, m.Indexes)
+}
+
+func ReadIndexFile(dir string) (*IndexManager, error) {
+	filePath := filepath.Join(dir, indexFileName)
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil, err
+	}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	var im *IndexManager
+	err = binary.Read(file, binary.BigEndian, im)
+	return im, err
 }

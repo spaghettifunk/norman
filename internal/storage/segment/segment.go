@@ -22,7 +22,7 @@ type Segment struct {
 	schema *arrow.Schema
 }
 
-func NewSegment(dir string, partition int32, schema *arrow.Schema) (*Segment, error) {
+func NewSegment(dir string, partition int, schema *arrow.Schema) (*Segment, error) {
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err

@@ -7,14 +7,12 @@ import (
 )
 
 type BitmapIndex[T indexer.ValidTypes] struct {
-	columnName string
-	index      map[T]*bitmap.Bitmap
+	index map[T]*bitmap.Bitmap
 }
 
-func NewBitmapIndex[T indexer.ValidTypes](columnName string) *BitmapIndex[T] {
+func New[T indexer.ValidTypes]() *BitmapIndex[T] {
 	return &BitmapIndex[T]{
-		columnName: columnName,
-		index:      make(map[T]*bitmap.Bitmap, 1_000),
+		index: make(map[T]*bitmap.Bitmap, 1_000),
 	}
 }
 

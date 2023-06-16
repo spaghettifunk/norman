@@ -8,7 +8,7 @@ import (
 type SortedIndex[T indexer.ValidTypes] struct {
 }
 
-func NewSortedIndex[T indexer.ValidTypes]() *SortedIndex[T] {
+func New[T indexer.ValidTypes]() *SortedIndex[T] {
 	return &SortedIndex[T]{}
 }
 

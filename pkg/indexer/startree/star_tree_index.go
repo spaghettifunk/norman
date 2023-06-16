@@ -1,6 +1,7 @@
 package startreeindex
 
 import (
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/spaghettifunk/norman/pkg/indexer"
 )
@@ -21,14 +22,18 @@ type StarTreeNode[T indexer.ValidTypes] struct {
 	Children []*StarTreeNode[T]
 }
 
-// NewStarTreeIndex initialize the root node
-func NewStarTreeIndex[T indexer.ValidTypes]() *StarTreeNode[T] {
+// New initialize the root node
+func New[T indexer.ValidTypes]() *StarTreeNode[T] {
 	return &StarTreeNode[T]{
 		Level:           0,
 		Dimension:       "root",
 		AggregatedValue: 0.0,
 		Children:        []*StarTreeNode[T]{},
 	}
+}
+
+func (st *StarTreeNode[T]) Build(id uuid.UUID, value T) bool {
+	return true
 }
 
 func (n *StarTreeNode[T]) ProcessEvent(node *StarTreeNode[T], event map[string]interface{}, dimensions []string, level int) {

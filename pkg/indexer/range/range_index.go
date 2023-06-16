@@ -10,7 +10,7 @@ type RangeIndex[T indexer.ValidTypes] struct {
 	index map[T]*roaring.Bitmap
 }
 
-func NewRangeIndex[T indexer.ValidTypes]() *RangeIndex[T] {
+func New[T indexer.ValidTypes]() *RangeIndex[T] {
 	return &RangeIndex[T]{
 		index: make(map[T]*roaring.Bitmap, 1_000),
 	}

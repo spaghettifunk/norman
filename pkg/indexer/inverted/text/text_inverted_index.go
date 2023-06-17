@@ -2,11 +2,13 @@ package textinvertedindex
 
 import (
 	"github.com/RoaringBitmap/roaring"
+	"github.com/rs/zerolog/log"
 	"github.com/segmentio/fasthash/fnv1a"
 	"github.com/spaghettifunk/norman/pkg/containers/mapset"
+	"github.com/spaghettifunk/norman/pkg/indexer"
 )
 
-type TextInvertedIndex struct {
+type TextInvertedIndex[T indexer.ValidType] struct {
 	columnName string
 	index      map[string]*roaring.Bitmap
 	stopWords  mapset.Set[string]
@@ -14,22 +16,29 @@ type TextInvertedIndex struct {
 
 // New creates a new Text InvertedIndex object
 // English is the only language supported
-func New(columnName string) *TextInvertedIndex {
+func New[T indexer.ValidType](columnName string) *TextInvertedIndex[T] {
 	stopWords := mapset.New[string]()
 	for _, sw := range stopWordsEN {
 		stopWords.Put(sw)
 	}
 
-	return &TextInvertedIndex{
-		index:     make(map[string]*roaring.Bitmap, 1_000),
-		stopWords: stopWords,
+	return &TextInvertedIndex[T]{
+		columnName: columnName,
+		index:      make(map[string]*roaring.Bitmap, 1_000),
+		stopWords:  stopWords,
 	}
 }
 
-// Build builds the inverted index
-// id is a UUID as string
-func (i *TextInvertedIndex) Build(id string, document interface{}) bool {
-	tokens := i.analyze(document.(string))
+// AddValue adds the current value for the given id to the index
+func (i *TextInvertedIndex[T]) AddValue(id string, value interface{}) bool {
+	// make sure we operate only with strings
+	document, ok := value.(string)
+	if !ok {
+		log.Error().Msg("value cannot be casted to string")
+		return false
+	}
+
+	tokens := i.analyze(document)
 	visited := make(map[string]bool, len(tokens))
 
 	for _, word := range tokens {
@@ -50,8 +59,13 @@ func (i *TextInvertedIndex) Build(id string, document interface{}) bool {
 }
 
 // Search queries the index for the given text.
-func (i *TextInvertedIndex) Search(value interface{}) []uint32 {
-	text := value.(string)
+func (i *TextInvertedIndex[T]) Search(value interface{}) []uint32 {
+	// make sure we operate only with strings
+	text, ok := value.(string)
+	if !ok {
+		log.Error().Msgf("value %x is not accepted", value)
+		return nil
+	}
 	var r *roaring.Bitmap
 	for _, token := range i.analyze(text) {
 		if ids, ok := i.index[token]; ok {
@@ -73,6 +87,6 @@ func (i *TextInvertedIndex) Search(value interface{}) []uint32 {
 	return r.ToArray()
 }
 
-func (i *TextInvertedIndex) GetColumnName() string {
+func (i *TextInvertedIndex[T]) GetColumnName() string {
 	return i.columnName
 }

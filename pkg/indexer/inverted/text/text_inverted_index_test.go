@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewInvertedIndex(t *testing.T) {
-	ii := New("dimension-a")
+	ii := New[string]("dimension-a")
 	assert.NotNil(t, ii)
 }
 
@@ -18,11 +18,11 @@ func TestBuildInvertedIndex(t *testing.T) {
 	documents["event-3"] = "And this is the third one."
 	documents["event-4"] = "Is this the first document?"
 
-	ii := New("dimension-a")
+	ii := New[string]("dimension-a")
 	assert.NotNil(t, ii)
 
 	for id, doc := range documents {
-		res := ii.Build(id, doc)
+		res := ii.AddValue(id, doc)
 		assert.Equal(t, true, res)
 	}
 }
@@ -34,11 +34,11 @@ func TestRetrieveIndex(t *testing.T) {
 	documents["event-3"] = "And this is the third one."
 	documents["event-4"] = "Is this the first document?"
 
-	ii := New("dimension-a")
+	ii := New[string]("dimension-a")
 	assert.NotNil(t, ii)
 
 	for id, doc := range documents {
-		res := ii.Build(id, doc)
+		res := ii.AddValue(id, doc)
 		assert.Equal(t, true, res)
 	}
 

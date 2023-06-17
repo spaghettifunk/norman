@@ -1,14 +1,15 @@
 package manager
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spaghettifunk/norman/pkg/indexer"
+	"github.com/vmihailenco/msgpack/v5"
 
 	bitmapindex "github.com/spaghettifunk/norman/pkg/indexer/bitmap"
 	textinvertedindex "github.com/spaghettifunk/norman/pkg/indexer/inverted/text"
@@ -28,7 +29,7 @@ const (
 
 type IndexManager struct {
 	directory string
-	Indexes   map[string]indexer.Indexer
+	Indexes   map[string]indexer.Indexer `msgpack:"indexes,inline"`
 	file      *os.File
 	mu        sync.Mutex
 }
@@ -40,35 +41,47 @@ func NewIndexManager(dir string) *IndexManager {
 	}
 }
 
-func (m *IndexManager) AddIndex(columnName string, indexType IndexType) error {
+// CreateIndex is needed to be designed this way to avoid many complications in type casting and generics
+func CreateIndex[T indexer.ValidType](m *IndexManager, columnName string, indexType IndexType) error {
 	if m.Indexes[columnName] != nil {
 		return fmt.Errorf("index already existing for column %s", columnName)
 	}
 
 	switch indexType {
 	case TextInvertedIndex:
-		m.Indexes[columnName] = textinvertedindex.New(columnName)
+		m.Indexes[columnName] = textinvertedindex.New[T](columnName)
 	case BitmapIndex:
-		m.Indexes[columnName] = bitmapindex.New(columnName)
+		m.Indexes[columnName] = bitmapindex.New[T](columnName)
 	case RangeIndex:
-		m.Indexes[columnName] = rangeindex.New(columnName)
+		m.Indexes[columnName] = rangeindex.New[T](columnName)
 	case SortedIndex:
-		m.Indexes[columnName] = sortedindex.New(columnName)
+		m.Indexes[columnName] = sortedindex.New[T](columnName)
 	default:
 		return fmt.Errorf("wrong index type %s", indexType)
 	}
 	return nil
 }
 
-func (m *IndexManager) BuildIndex(columnName string, id string, value interface{}) bool {
+func (m *IndexManager) Add(columnName string, id string, value interface{}) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	return m.Indexes[columnName].Build(id, value)
+	idx, ok := m.Indexes[columnName]
+	if !ok {
+		log.Error().Msgf("no index for column %s", columnName)
+		return false
+	}
+
+	return idx.AddValue(id, value)
 }
 
 func (m *IndexManager) QueryIndex(columnName string, value interface{}) []uint32 {
-	return m.Indexes[columnName].Search(value)
+	idx, ok := m.Indexes[columnName]
+	if !ok {
+		log.Error().Msgf("no index for column %s", columnName)
+		return nil
+	}
+	return idx.Search(value)
 }
 
 func (m *IndexManager) PersistToDisk() error {
@@ -91,7 +104,17 @@ func (m *IndexManager) PersistToDisk() error {
 		}()
 	}
 
-	return binary.Write(m.file, binary.BigEndian, m.Indexes)
+	// marshall the object using messagepack
+	b, err := msgpack.Marshal(m.Indexes)
+	if err != nil {
+		return err
+	}
+
+	offset, err := m.file.Write(b)
+	if offset <= 0 || err != nil {
+		return fmt.Errorf("error in writing indexing file")
+	}
+	return nil
 }
 
 func ReadIndexFile(dir string) (*IndexManager, error) {
@@ -100,12 +123,14 @@ func ReadIndexFile(dir string) (*IndexManager, error) {
 		return nil, err
 	}
 
-	file, err := os.Open(filePath)
+	buff, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	var im *IndexManager
-	err = binary.Read(file, binary.BigEndian, im)
-	return im, err
+	im := IndexManager{}
+	if err = msgpack.Unmarshal(buff, &im.Indexes); err != nil {
+		return nil, err
+	}
+	return &im, err
 }

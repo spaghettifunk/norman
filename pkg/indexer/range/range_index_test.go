@@ -7,6 +7,6 @@ import (
 )
 
 func TestNewRangeIndex(t *testing.T) {
-	ri := New("dimension-a")
+	ri := New[int]("dimension-a")
 	assert.NotNil(t, ri)
 }

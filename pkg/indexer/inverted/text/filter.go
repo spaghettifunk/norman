@@ -7,7 +7,7 @@ import (
 )
 
 // lowercaseFilter returns a slice of tokens normalized to lower case.
-func (i *TextInvertedIndex) lowercaseFilter(tokens []string) []string {
+func (i *TextInvertedIndex[T]) lowercaseFilter(tokens []string) []string {
 	r := make([]string, len(tokens))
 	for i, token := range tokens {
 		r[i] = strings.ToLower(token)
@@ -21,7 +21,7 @@ var stopWordsEN = []string{"a", "an", "and", "are", "as", "at", "be", "but", "by
 	"this", "to", "was", "will", "with", "those"}
 
 // stopwordFilter returns a slice of tokens with stop words removed.
-func (i *TextInvertedIndex) stopwordFilter(tokens []string) []string {
+func (i *TextInvertedIndex[T]) stopwordFilter(tokens []string) []string {
 	r := make([]string, 0, len(tokens))
 	for _, token := range tokens {
 		if !i.stopWords.Has(token) {
@@ -32,7 +32,7 @@ func (i *TextInvertedIndex) stopwordFilter(tokens []string) []string {
 }
 
 // stemmerFilter returns a slice of stemmed tokens.
-func (i *TextInvertedIndex) stemmerFilter(tokens []string) []string {
+func (i *TextInvertedIndex[T]) stemmerFilter(tokens []string) []string {
 	r := make([]string, len(tokens))
 	for i, token := range tokens {
 		r[i] = snowballeng.Stem(token, false)

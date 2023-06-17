@@ -1,23 +1,38 @@
 package sortedindex
 
-type SortedIndex struct {
+import (
+	"github.com/rs/zerolog/log"
+	"github.com/spaghettifunk/norman/pkg/indexer"
+)
+
+type SortedIndex[T indexer.ValidType] struct {
 	columnName string
 }
 
-func New(columnName string) *SortedIndex {
-	return &SortedIndex{
+func New[T indexer.ValidType](columnName string) *SortedIndex[T] {
+	return &SortedIndex[T]{
 		columnName: columnName,
 	}
 }
 
-func (i *SortedIndex) Build(id string, value interface{}) bool {
+func (i *SortedIndex[T]) AddValue(id string, value interface{}) bool {
+	_, ok := value.(T)
+	if !ok {
+		log.Error().Msg("value cannot be casted to ValidType")
+		return false
+	}
 	return true
 }
 
-func (i *SortedIndex) Search(value interface{}) []uint32 {
+func (i *SortedIndex[T]) Search(value interface{}) []uint32 {
+	_, ok := value.(T)
+	if !ok {
+		log.Error().Msg("value cannot be casted to ValidType")
+		return nil
+	}
 	return nil
 }
 
-func (i *SortedIndex) GetColumnName() string {
+func (i *SortedIndex[T]) GetColumnName() string {
 	return i.columnName
 }

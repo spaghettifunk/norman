@@ -1,6 +1,8 @@
 package manager
 
 import (
+	"encoding/gob"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -9,7 +11,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spaghettifunk/norman/pkg/indexer"
-	"github.com/vmihailenco/msgpack/v5"
 
 	bitmapindex "github.com/spaghettifunk/norman/pkg/indexer/bitmap"
 	textinvertedindex "github.com/spaghettifunk/norman/pkg/indexer/inverted/text"
@@ -17,24 +18,21 @@ import (
 	sortedindex "github.com/spaghettifunk/norman/pkg/indexer/sorted"
 )
 
-type IndexType string
-
 const (
-	indexFileName     string    = "indexes.norman"
-	TextInvertedIndex IndexType = "TEXT_INVERTED_INDEX"
-	BitmapIndex       IndexType = "BITMAP_INDEX"
-	RangeIndex        IndexType = "RANGE_INDEX"
-	SortedIndex       IndexType = "SORTED_INDEX"
+	indexFileName string = "indexes.norman"
 )
 
 type IndexManager struct {
 	directory string
-	Indexes   map[string]indexer.Indexer `msgpack:"indexes,inline"`
+	Indexes   map[string]indexer.Indexer `json:"indexes"`
 	file      *os.File
 	mu        sync.Mutex
 }
 
 func NewIndexManager(dir string) *IndexManager {
+	// register gob interfaces
+	gob.Register(map[string]indexer.Indexer{})
+
 	return &IndexManager{
 		directory: dir,
 		Indexes:   make(map[string]indexer.Indexer, 10),
@@ -42,19 +40,19 @@ func NewIndexManager(dir string) *IndexManager {
 }
 
 // CreateIndex is needed to be designed this way to avoid many complications in type casting and generics
-func CreateIndex[T indexer.ValidType](m *IndexManager, columnName string, indexType IndexType) error {
+func CreateIndex[T indexer.ValidType](m *IndexManager, columnName string, indexType indexer.IndexType) error {
 	if m.Indexes[columnName] != nil {
 		return fmt.Errorf("index already existing for column %s", columnName)
 	}
 
 	switch indexType {
-	case TextInvertedIndex:
+	case indexer.TextInvertedIndex:
 		m.Indexes[columnName] = textinvertedindex.New[T](columnName)
-	case BitmapIndex:
+	case indexer.BitmapIndex:
 		m.Indexes[columnName] = bitmapindex.New[T](columnName)
-	case RangeIndex:
+	case indexer.RangeIndex:
 		m.Indexes[columnName] = rangeindex.New[T](columnName)
-	case SortedIndex:
+	case indexer.SortedIndex:
 		m.Indexes[columnName] = sortedindex.New[T](columnName)
 	default:
 		return fmt.Errorf("wrong index type %s", indexType)
@@ -104,15 +102,20 @@ func (m *IndexManager) PersistToDisk() error {
 		}()
 	}
 
-	// marshall the object using messagepack
-	b, err := msgpack.Marshal(m.Indexes)
+	// marshal and compress with Brotli to save space
+	buffer, err := json.Marshal(&m)
 	if err != nil {
 		return err
 	}
+	// buffer, err := utils.CompressBrotli(buf)
+	// if err != nil {
+	// 	return err
+	// }
 
-	offset, err := m.file.Write(b)
-	if offset <= 0 || err != nil {
-		return fmt.Errorf("error in writing indexing file")
+	// TODO: handle when file already exists. Potential solution is to create a tmp file
+	// delete the current index file and then change the name of the tmp file
+	if _, err = m.file.Write(buffer); err != nil {
+		return err
 	}
 	return nil
 }
@@ -123,14 +126,36 @@ func ReadIndexFile(dir string) (*IndexManager, error) {
 		return nil, err
 	}
 
-	buff, err := os.ReadFile(filePath)
+	buffer, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	im := IndexManager{}
-	if err = msgpack.Unmarshal(buff, &im.Indexes); err != nil {
+	// buffer, err := utils.DecompressBrotli(buf)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	im := &IndexManager{}
+	if err = json.Unmarshal(buffer, &im); err != nil {
+		log.Error().Msg(err.Error())
 		return nil, err
 	}
-	return &im, err
+
+	return im, err
 }
+
+type IndexManagerJSON struct {
+}
+
+// func (i *IndexManager) UnmarshalJSON(data []byte) error {
+// 	bitmapIndexes := []aliasJSON[T]{}
+// 	if err := json.Unmarshal(data, &bitmapIndexes); err != nil {
+// 		return err
+// 	}
+// 	for _, bi := range bitmapIndexes {
+// 		bm := bitmap.FromBytes(bi.Ids)
+// 		i.Index[bi.Key] = &bm
+// 	}
+// 	return nil
+// }

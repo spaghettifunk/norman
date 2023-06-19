@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/spaghettifunk/norman/pkg/indexer"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,15 +20,15 @@ func TestCreateIndex(t *testing.T) {
 
 	tests := []struct {
 		dimension string
-		indexType IndexType
+		indexType indexer.IndexType
 		expected  error
 	}{
-		{"dim-a", BitmapIndex, nil},
-		{"dim-b", RangeIndex, nil},
-		{"dim-c", SortedIndex, nil},
-		{"dim-d", TextInvertedIndex, nil},
+		{"dim-a", indexer.BitmapIndex, nil},
+		{"dim-b", indexer.RangeIndex, nil},
+		{"dim-c", indexer.SortedIndex, nil},
+		{"dim-d", indexer.TextInvertedIndex, nil},
 		{"dim-g", "unknown", fmt.Errorf("wrong index type unknown")},
-		{"dim-d", TextInvertedIndex, fmt.Errorf("index already existing for column dim-d")},
+		{"dim-d", indexer.TextInvertedIndex, fmt.Errorf("index already existing for column dim-d")},
 	}
 	for _, tt := range tests {
 		testname := fmt.Sprintf("%s,%s", tt.dimension, tt.indexType)
@@ -42,7 +43,7 @@ func TestAddValue(t *testing.T) {
 	im := NewIndexManager("./output/default/transcript")
 	assert.NotNil(t, im)
 
-	err := CreateIndex[string](im, "dim-a", TextInvertedIndex)
+	err := CreateIndex[string](im, "dim-a", indexer.TextInvertedIndex)
 	assert.Nil(t, err)
 
 	tests := []struct {
@@ -72,7 +73,7 @@ func TestSearchValue(t *testing.T) {
 	im := NewIndexManager("./output/default/transcript")
 	assert.NotNil(t, im)
 
-	err := CreateIndex[string](im, "dim-a", TextInvertedIndex)
+	err := CreateIndex[string](im, "dim-a", indexer.TextInvertedIndex)
 	assert.Nil(t, err)
 
 	if im.Add("dim-a", "id-1", "hellow banana") == false {
@@ -106,7 +107,7 @@ func TestPersistOnDisk(t *testing.T) {
 	im := NewIndexManager("./output/default/transcript")
 	assert.NotNil(t, im)
 
-	err := CreateIndex[string](im, "dim-a", TextInvertedIndex)
+	err := CreateIndex[string](im, "dim-a", indexer.TextInvertedIndex)
 	assert.Nil(t, err)
 
 	if im.Add("dim-a", "id-1", "hellow banana") == false {
@@ -129,7 +130,13 @@ func TestReadIndexFile(t *testing.T) {
 	im := NewIndexManager("./output/default/transcript")
 	assert.NotNil(t, im)
 
-	err := CreateIndex[string](im, "dim-a", TextInvertedIndex)
+	err := CreateIndex[string](im, "dim-a", indexer.TextInvertedIndex)
+	assert.Nil(t, err)
+	err = CreateIndex[int](im, "dim-b", indexer.RangeIndex)
+	assert.Nil(t, err)
+	err = CreateIndex[int](im, "dim-c", indexer.SortedIndex)
+	assert.Nil(t, err)
+	err = CreateIndex[float32](im, "dim-d", indexer.BitmapIndex)
 	assert.Nil(t, err)
 
 	if im.Add("dim-a", "id-1", "hellow banana") == false {
@@ -138,6 +145,22 @@ func TestReadIndexFile(t *testing.T) {
 
 	if im.Add("dim-a", "id-2", "banana chocolate and strawberries?") == false {
 		t.Errorf("failed adding event id %s", "id-2")
+	}
+
+	if im.Add("dim-a", "id-3", "strawberries are the best, right?") == false {
+		t.Errorf("failed adding event id %s", "id-3")
+	}
+
+	if im.Add("dim-b", "id-1", 42) == false {
+		t.Errorf("failed adding event id %s", "id-1")
+	}
+
+	if im.Add("dim-b", "id-2", 125) == false {
+		t.Errorf("failed adding event id %s", "id-2")
+	}
+
+	if im.Add("dim-b", "id-3", 25) == false {
+		t.Errorf("failed adding event id %s", "id-3")
 	}
 
 	err = im.PersistToDisk()

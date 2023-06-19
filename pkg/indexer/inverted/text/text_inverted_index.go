@@ -1,6 +1,8 @@
 package textinvertedindex
 
 import (
+	"encoding/json"
+
 	"github.com/RoaringBitmap/roaring"
 	"github.com/rs/zerolog/log"
 	"github.com/segmentio/fasthash/fnv1a"
@@ -9,9 +11,9 @@ import (
 )
 
 type TextInvertedIndex[T indexer.ValidType] struct {
-	columnName string
-	index      map[string]*roaring.Bitmap
-	stopWords  mapset.Set[string]
+	ColumnName string                     `json:"columnName"`
+	Index      map[string]*roaring.Bitmap `json:"index"`
+	StopWords  mapset.Set[string]         `json:"-"`
 }
 
 // New creates a new Text InvertedIndex object
@@ -23,9 +25,9 @@ func New[T indexer.ValidType](columnName string) *TextInvertedIndex[T] {
 	}
 
 	return &TextInvertedIndex[T]{
-		columnName: columnName,
-		index:      make(map[string]*roaring.Bitmap, 1_000),
-		stopWords:  stopWords,
+		ColumnName: columnName,
+		Index:      make(map[string]*roaring.Bitmap, 1_000),
+		StopWords:  stopWords,
 	}
 }
 
@@ -46,10 +48,10 @@ func (i *TextInvertedIndex[T]) AddValue(id string, value interface{}) bool {
 			continue
 		}
 
-		rb, ok := i.index[word]
+		rb, ok := i.Index[word]
 		if !ok {
 			rb = roaring.NewBitmap()
-			i.index[word] = rb
+			i.Index[word] = rb
 		}
 
 		rb.Add(fnv1a.HashString32(id))
@@ -68,7 +70,7 @@ func (i *TextInvertedIndex[T]) Search(value interface{}) []uint32 {
 	}
 	var r *roaring.Bitmap
 	for _, token := range i.analyze(text) {
-		if ids, ok := i.index[token]; ok {
+		if ids, ok := i.Index[token]; ok {
 			if r == nil {
 				r = roaring.NewBitmap()
 				iterator := ids.Iterator()
@@ -88,5 +90,42 @@ func (i *TextInvertedIndex[T]) Search(value interface{}) []uint32 {
 }
 
 func (i *TextInvertedIndex[T]) GetColumnName() string {
-	return i.columnName
+	return i.ColumnName
+}
+
+func (i *TextInvertedIndex[T]) GetIndexType() indexer.IndexType {
+	return indexer.TextInvertedIndex
+}
+
+type TextInvertedIndexJSON struct {
+	IndexType  indexer.IndexType `json:"type"`
+	ColumnName string            `json:"column"`
+	Indexes    []TextMapIdsJSON  `json:"index"`
+}
+
+type TextMapIdsJSON struct {
+	Key string   `json:"key"`
+	Ids []uint32 `json:"ids"`
+}
+
+func (i *TextInvertedIndex[T]) MarshalJSON() ([]byte, error) {
+	textIndexes := TextInvertedIndexJSON{IndexType: i.GetIndexType(), ColumnName: i.GetColumnName()}
+	for val, ids := range i.Index {
+		textIndexes.Indexes = append(textIndexes.Indexes, TextMapIdsJSON{val, ids.ToArray()})
+	}
+	return json.Marshal(textIndexes)
+}
+
+func (i *TextInvertedIndex[T]) UnmarshalJSON(data []byte) error {
+	textIndexes := TextInvertedIndexJSON{}
+	if err := json.Unmarshal(data, &textIndexes); err != nil {
+		return err
+	}
+	i.ColumnName = textIndexes.ColumnName
+	for _, bi := range textIndexes.Indexes {
+		rb := roaring.NewBitmap()
+		rb.AddMany(bi.Ids)
+		i.Index[bi.Key] = rb
+	}
+	return nil
 }

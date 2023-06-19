@@ -1,10 +1,13 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"strings"
 	"unicode"
+
+	"github.com/andybalholm/brotli"
 )
 
 func RPCAddr(bindAddr string, rpcPort int) (string, error) {
@@ -23,4 +26,27 @@ func RemovePunctuations(input string) string {
 		}
 	}
 	return builder.String()
+}
+
+func CompressBrotli(data []byte) ([]byte, error) {
+	var b bytes.Buffer
+	w := brotli.NewWriterLevel(&b, brotli.BestCompression)
+	if _, err := w.Write(data); err != nil {
+		return nil, err
+	}
+
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
+
+	return b.Bytes(), nil
+}
+
+func DecompressBrotli(data []byte) ([]byte, error) {
+	r := bytes.NewBuffer(data)
+	reader := brotli.NewReader(r)
+	if _, err := reader.Read(data); err != nil {
+		return nil, err
+	}
+	return r.Bytes(), nil
 }

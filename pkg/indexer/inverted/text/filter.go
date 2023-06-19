@@ -24,7 +24,7 @@ var stopWordsEN = []string{"a", "an", "and", "are", "as", "at", "be", "but", "by
 func (i *TextInvertedIndex[T]) stopwordFilter(tokens []string) []string {
 	r := make([]string, 0, len(tokens))
 	for _, token := range tokens {
-		if !i.stopWords.Has(token) {
+		if !i.StopWords.Has(token) {
 			r = append(r, token)
 		}
 	}

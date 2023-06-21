@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog/log"
+	"github.com/spaghettifunk/norman/internal/common/utils"
 	"github.com/spaghettifunk/norman/pkg/indexer"
 
 	bitmapindex "github.com/spaghettifunk/norman/pkg/indexer/bitmap"
@@ -119,15 +120,15 @@ func (m *IndexManager) PersistToDisk(segmentID, partitionStart, partitionEnd str
 	m.internal.PartitionEnd = partitionEnd
 
 	// marshal and compress with Brotli to save space
-	buffer, err := json.Marshal(&m.internal)
+	buf, err := json.Marshal(&m.internal)
 	if err != nil {
 		return err
 	}
 
-	// buffer, err := utils.CompressBrotli(buf)
-	// if err != nil {
-	// 	return err
-	// }
+	buffer, err := utils.CompressBrotli(buf)
+	if err != nil {
+		return err
+	}
 
 	// TODO: handle when file already exists. Potential solution is to create a tmp file
 	// delete the current index file and then change the name of the tmp file
@@ -143,15 +144,15 @@ func ReadIndexFile(dir string) (*IndexManager, error) {
 		return nil, err
 	}
 
-	buffer, err := os.ReadFile(filePath)
+	buf, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	// buffer, err := utils.DecompressBrotli(buf)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	buffer, err := utils.DecompressBrotli(buf)
+	if err != nil {
+		return nil, err
+	}
 
 	im := &IndexManager{
 		directory: dir,

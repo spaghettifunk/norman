@@ -2,6 +2,7 @@ package textinvertedindex
 
 import (
 	"encoding/json"
+	"reflect"
 
 	"github.com/RoaringBitmap/roaring"
 	"github.com/rs/zerolog/log"
@@ -11,9 +12,9 @@ import (
 )
 
 type TextInvertedIndex[T indexer.ValidType] struct {
-	ColumnName string                     `json:"columnName"`
-	Index      map[string]*roaring.Bitmap `json:"index"`
-	StopWords  mapset.Set[string]         `json:"-"`
+	Metadata  indexer.IndexMetadata[T]   `json:"metadata"`
+	Index     map[string]*roaring.Bitmap `json:"index"`
+	StopWords mapset.Set[string]         `json:"-"`
 }
 
 // New creates a new Text InvertedIndex object
@@ -23,11 +24,15 @@ func New[T indexer.ValidType](columnName string) *TextInvertedIndex[T] {
 	for _, sw := range stopWordsEN {
 		stopWords.Put(sw)
 	}
-
+	var t T
 	return &TextInvertedIndex[T]{
-		ColumnName: columnName,
-		Index:      make(map[string]*roaring.Bitmap, 1_000),
-		StopWords:  stopWords,
+		Metadata: indexer.IndexMetadata[T]{
+			CastType:   reflect.TypeOf(t).Kind(),
+			IndexType:  indexer.TextInvertedIndex,
+			ColumnName: columnName,
+		},
+		Index:     make(map[string]*roaring.Bitmap, 1_000),
+		StopWords: stopWords,
 	}
 }
 
@@ -90,17 +95,16 @@ func (i *TextInvertedIndex[T]) Search(value interface{}) []uint32 {
 }
 
 func (i *TextInvertedIndex[T]) GetColumnName() string {
-	return i.ColumnName
+	return i.Metadata.ColumnName
 }
 
 func (i *TextInvertedIndex[T]) GetIndexType() indexer.IndexType {
-	return indexer.TextInvertedIndex
+	return i.Metadata.IndexType
 }
 
-type TextInvertedIndexJSON struct {
-	IndexType  indexer.IndexType `json:"type"`
-	ColumnName string            `json:"column"`
-	Indexes    []TextMapIdsJSON  `json:"index"`
+type TextInvertedIndexJSON[T indexer.ValidType] struct {
+	Metadata indexer.IndexMetadata[T] `json:"metadata"`
+	Indexes  []TextMapIdsJSON         `json:"index"`
 }
 
 type TextMapIdsJSON struct {
@@ -109,20 +113,21 @@ type TextMapIdsJSON struct {
 }
 
 func (i *TextInvertedIndex[T]) MarshalJSON() ([]byte, error) {
-	textIndexes := TextInvertedIndexJSON{IndexType: i.GetIndexType(), ColumnName: i.GetColumnName()}
+	textIndexes := TextInvertedIndexJSON[T]{
+		Metadata: i.Metadata,
+	}
 	for val, ids := range i.Index {
 		textIndexes.Indexes = append(textIndexes.Indexes, TextMapIdsJSON{val, ids.ToArray()})
 	}
 	return json.Marshal(textIndexes)
 }
 
-func (i *TextInvertedIndex[T]) UnmarshalJSON(data []byte) error {
-	textIndexes := TextInvertedIndexJSON{}
+func (i *TextInvertedIndex[T]) Deserialize(data []byte) error {
+	textIndexes := []TextMapIdsJSON{}
 	if err := json.Unmarshal(data, &textIndexes); err != nil {
 		return err
 	}
-	i.ColumnName = textIndexes.ColumnName
-	for _, bi := range textIndexes.Indexes {
+	for _, bi := range textIndexes {
 		rb := roaring.NewBitmap()
 		rb.AddMany(bi.Ids)
 		i.Index[bi.Key] = rb

@@ -2,18 +2,24 @@ package sortedindex
 
 import (
 	"encoding/json"
+	"reflect"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spaghettifunk/norman/pkg/indexer"
 )
 
 type SortedIndex[T indexer.ValidType] struct {
-	ColumnName string `json:"columnName"`
+	Metadata indexer.IndexMetadata[T] `json:"metadata"`
 }
 
 func New[T indexer.ValidType](columnName string) *SortedIndex[T] {
+	var t T
 	return &SortedIndex[T]{
-		ColumnName: columnName,
+		Metadata: indexer.IndexMetadata[T]{
+			CastType:   reflect.TypeOf(t).Kind(),
+			IndexType:  indexer.SortedIndex,
+			ColumnName: columnName,
+		},
 	}
 }
 
@@ -36,28 +42,25 @@ func (i *SortedIndex[T]) Search(value interface{}) []uint32 {
 }
 
 func (i *SortedIndex[T]) GetColumnName() string {
-	return i.ColumnName
+	return i.Metadata.ColumnName
 }
 
 func (i *SortedIndex[T]) GetIndexType() indexer.IndexType {
-	return indexer.SortedIndex
+	return i.Metadata.IndexType
 }
 
 type SortedIndexJSON[T indexer.ValidType] struct {
-	IndexType  indexer.IndexType `json:"type"`
-	ColumnName string            `json:"column"`
+	Metadata indexer.IndexMetadata[T] `json:"metadata"`
 }
 
 func (i *SortedIndex[T]) MarshalJSON() ([]byte, error) {
-	si := &SortedIndexJSON[T]{IndexType: indexer.SortedIndex, ColumnName: i.ColumnName}
+	si := &SortedIndexJSON[T]{
+		Metadata: i.Metadata,
+	}
 	return json.Marshal(si)
 }
 
-func (i *SortedIndex[T]) UnmarshalJSON(data []byte) error {
-	si := &SortedIndexJSON[T]{}
-	if err := json.Unmarshal(data, si); err != nil {
-		return err
-	}
-	i.ColumnName = si.ColumnName
+// TODO: implement this once there is an actual index system
+func (i *SortedIndex[T]) Deserialize(data []byte) error {
 	return nil
 }

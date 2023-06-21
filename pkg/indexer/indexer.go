@@ -1,6 +1,10 @@
 package indexer
 
-import "golang.org/x/exp/constraints"
+import (
+	"reflect"
+
+	"golang.org/x/exp/constraints"
+)
 
 type IndexType string
 
@@ -16,8 +20,15 @@ type Indexer interface {
 	GetIndexType() IndexType
 	AddValue(id string, value interface{}) bool
 	Search(value interface{}) []uint32
+	Deserialize(data []byte) error
 }
 
 type ValidType interface {
 	constraints.Float | constraints.Integer | string
+}
+
+type IndexMetadata[T ValidType] struct {
+	CastType   reflect.Kind `json:"castType"`
+	IndexType  IndexType    `json:"type"`
+	ColumnName string       `json:"column"`
 }

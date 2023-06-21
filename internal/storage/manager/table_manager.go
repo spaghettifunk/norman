@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	eventIDName string = "_normanID"
+	eventIDName         string = "_normanID"
+	partitionTimeFormat string = "2006-01-02T15:04:05"
 )
 
 type TableManager struct {
@@ -85,7 +86,7 @@ func NewTableManager(table *entities.Table) (*TableManager, error) {
 func (t *TableManager) CreateNewSegment() error {
 	d := time.Now()
 
-	fPath := fmt.Sprintf("%s/%s", t.baseDir, d.Format("2006-01-02T15:04:05"))
+	fPath := fmt.Sprintf("%s/%s", t.baseDir, d.Format(partitionTimeFormat))
 	s, err := segment.NewSegment(fPath, t.partition, t.Table.EventSchema)
 	if err != nil {
 		return err
@@ -142,9 +143,9 @@ func (t *TableManager) generateEventID(partitionInterval time.Time) string {
 	bf.WriteString("_P")
 	bf.WriteString(strconv.Itoa(t.partition))
 	bf.WriteByte('_')
-	bf.WriteString(t.partitionStart.Format("2006-01-02T15:04:05:00"))
+	bf.WriteString(t.partitionStart.Format(partitionTimeFormat))
 	bf.WriteByte('_')
-	bf.WriteString(partitionInterval.Format("2006-01-02T15:04:05:00"))
+	bf.WriteString(partitionInterval.Format(partitionTimeFormat))
 	bf.WriteByte('_')
 	bf.WriteString(strconv.Itoa(t.eventsCounter))
 

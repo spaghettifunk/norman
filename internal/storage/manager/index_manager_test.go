@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/spaghettifunk/norman/pkg/indexer"
 	"github.com/stretchr/testify/assert"
 )
@@ -118,14 +120,17 @@ func TestPersistOnDisk(t *testing.T) {
 		t.Errorf("failed adding event id %s", "id-2")
 	}
 
-	err = im.PersistToDisk()
+	segmentID := uuid.New().String()
+	partitionEnd := time.Now().Format(partitionTimeFormat)
+	partitionStart := time.Now().Add(time.Duration(5) * time.Minute).Format(partitionTimeFormat)
+	err = im.PersistToDisk(segmentID, partitionStart, partitionEnd)
 	assert.Nil(t, err)
 
 	deleteOutputFolder(t)
 }
 
 func TestReadIndexFile(t *testing.T) {
-	t.SkipNow()
+	// t.SkipNow()
 
 	im := NewIndexManager("./output/default/transcript")
 	assert.NotNil(t, im)
@@ -163,7 +168,10 @@ func TestReadIndexFile(t *testing.T) {
 		t.Errorf("failed adding event id %s", "id-3")
 	}
 
-	err = im.PersistToDisk()
+	segmentID := uuid.New().String()
+	partitionEnd := time.Now().Format(partitionTimeFormat)
+	partitionStart := time.Now().Add(time.Duration(5) * time.Minute).Format(partitionTimeFormat)
+	err = im.PersistToDisk(segmentID, partitionStart, partitionEnd)
 	assert.Nil(t, err)
 
 	mng, err := ReadIndexFile("./output/default/transcript")

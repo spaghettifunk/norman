@@ -2,6 +2,7 @@ package bitmapindex
 
 import (
 	"encoding/json"
+	"reflect"
 
 	"github.com/kelindar/bitmap"
 	"github.com/rs/zerolog/log"
@@ -10,14 +11,19 @@ import (
 )
 
 type BitmapIndex[T indexer.ValidType] struct {
-	ColumnName string
-	Index      map[T]*bitmap.Bitmap
+	Metadata indexer.IndexMetadata[T] `json:"metadata"`
+	Index    map[T]*bitmap.Bitmap     `json:"index"`
 }
 
 func New[T indexer.ValidType](columnName string) *BitmapIndex[T] {
+	var t T
 	return &BitmapIndex[T]{
-		ColumnName: columnName,
-		Index:      make(map[T]*bitmap.Bitmap, 1_000),
+		Metadata: indexer.IndexMetadata[T]{
+			CastType:   reflect.TypeOf(t).Kind(),
+			IndexType:  indexer.BitmapIndex,
+			ColumnName: columnName,
+		},
+		Index: make(map[T]*bitmap.Bitmap, 1_000),
 	}
 }
 
@@ -46,17 +52,16 @@ func (i *BitmapIndex[T]) SearchRange(min, max interface{}) []uint32 {
 }
 
 func (i *BitmapIndex[T]) GetColumnName() string {
-	return i.ColumnName
+	return i.Metadata.ColumnName
 }
 
 func (i *BitmapIndex[T]) GetIndexType() indexer.IndexType {
-	return indexer.BitmapIndex
+	return i.Metadata.IndexType
 }
 
 type BitmapIndexJSON[T indexer.ValidType] struct {
-	IndexType  indexer.IndexType     `json:"type"`
-	ColumnName string                `json:"column"`
-	Indexes    []BitmapMapIdsJSON[T] `json:"index"`
+	Metadata indexer.IndexMetadata[T] `json:"metadata"`
+	Indexes  []BitmapMapIdsJSON[T]    `json:"index"`
 }
 
 type BitmapMapIdsJSON[T indexer.ValidType] struct {
@@ -65,20 +70,21 @@ type BitmapMapIdsJSON[T indexer.ValidType] struct {
 }
 
 func (i *BitmapIndex[T]) MarshalJSON() ([]byte, error) {
-	bitmapIndexes := BitmapIndexJSON[T]{IndexType: i.GetIndexType(), ColumnName: i.GetColumnName()}
+	bitmapIndexes := BitmapIndexJSON[T]{
+		Metadata: i.Metadata,
+	}
 	for val, ids := range i.Index {
 		bitmapIndexes.Indexes = append(bitmapIndexes.Indexes, BitmapMapIdsJSON[T]{val, ids.ToBytes()})
 	}
 	return json.Marshal(bitmapIndexes)
 }
 
-func (i *BitmapIndex[T]) UnmarshalJSON(data []byte) error {
-	bitmapIndexes := BitmapIndexJSON[T]{}
+func (i *BitmapIndex[T]) Deserialize(data []byte) error {
+	bitmapIndexes := []BitmapMapIdsJSON[T]{}
 	if err := json.Unmarshal(data, &bitmapIndexes); err != nil {
 		return err
 	}
-	i.ColumnName = bitmapIndexes.ColumnName
-	for _, bi := range bitmapIndexes.Indexes {
+	for _, bi := range bitmapIndexes {
 		bm := bitmap.FromBytes(bi.Ids)
 		i.Index[bi.Key] = &bm
 	}

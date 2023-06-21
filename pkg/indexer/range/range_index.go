@@ -2,6 +2,7 @@ package rangeindex
 
 import (
 	"encoding/json"
+	"reflect"
 
 	"github.com/RoaringBitmap/roaring"
 	"github.com/rs/zerolog/log"
@@ -10,14 +11,19 @@ import (
 )
 
 type RangeIndex[T indexer.ValidType] struct {
-	ColumnName string                `json:"columnName"`
-	Index      map[T]*roaring.Bitmap `json:"index"`
+	Metadata indexer.IndexMetadata[T] `json:"metadata"`
+	Index    map[T]*roaring.Bitmap    `json:"index"`
 }
 
 func New[T indexer.ValidType](columnName string) *RangeIndex[T] {
+	var t T
 	return &RangeIndex[T]{
-		ColumnName: columnName,
-		Index:      make(map[T]*roaring.Bitmap, 1_000),
+		Metadata: indexer.IndexMetadata[T]{
+			CastType:   reflect.TypeOf(t).Kind(),
+			IndexType:  indexer.RangeIndex,
+			ColumnName: columnName,
+		},
+		Index: make(map[T]*roaring.Bitmap, 1_000),
 	}
 }
 
@@ -63,17 +69,16 @@ func (i *RangeIndex[T]) Search(value interface{}) []uint32 {
 }
 
 func (i *RangeIndex[T]) GetColumnName() string {
-	return i.ColumnName
+	return i.Metadata.ColumnName
 }
 
 func (i *RangeIndex[T]) GetIndexType() indexer.IndexType {
-	return indexer.RangeIndex
+	return i.Metadata.IndexType
 }
 
 type RangeIndexJSON[T indexer.ValidType] struct {
-	IndexType  indexer.IndexType    `json:"type"`
-	ColumnName string               `json:"column"`
-	Indexes    []RangeMapIdsJSON[T] `json:"index"`
+	Metadata indexer.IndexMetadata[T] `json:"metadata"`
+	Indexes  []RangeMapIdsJSON[T]     `json:"index"`
 }
 
 type RangeMapIdsJSON[T indexer.ValidType] struct {
@@ -82,20 +87,21 @@ type RangeMapIdsJSON[T indexer.ValidType] struct {
 }
 
 func (i *RangeIndex[T]) MarshalJSON() ([]byte, error) {
-	rangeIndexes := RangeIndexJSON[T]{IndexType: i.GetIndexType(), ColumnName: i.GetColumnName()}
+	rangeIndexes := RangeIndexJSON[T]{
+		Metadata: i.Metadata,
+	}
 	for val, ids := range i.Index {
 		rangeIndexes.Indexes = append(rangeIndexes.Indexes, RangeMapIdsJSON[T]{val, ids.ToArray()})
 	}
 	return json.Marshal(rangeIndexes)
 }
 
-func (i *RangeIndex[T]) UnmarshalJSON(data []byte) error {
-	rangeIndexes := RangeIndexJSON[T]{}
+func (i *RangeIndex[T]) Deserialize(data []byte) error {
+	rangeIndexes := []RangeMapIdsJSON[T]{}
 	if err := json.Unmarshal(data, &rangeIndexes); err != nil {
 		return err
 	}
-	i.ColumnName = rangeIndexes.ColumnName
-	for _, ri := range rangeIndexes.Indexes {
+	for _, ri := range rangeIndexes {
 		rb := roaring.NewBitmap()
 		rb.AddMany(ri.Ids)
 		i.Index[ri.Key] = rb

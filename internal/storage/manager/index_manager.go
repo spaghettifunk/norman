@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -24,9 +25,17 @@ const (
 
 type IndexManager struct {
 	directory string
-	Indexes   map[string]indexer.Indexer `json:"indexes"`
+	internal  *internalData
 	file      *os.File
 	mu        sync.Mutex
+}
+
+type internalData struct {
+	SegmentID      string                     `json:"segmentId"`
+	PartitionStart string                     `json:"partitionStart"`
+	PartitionEnd   string                     `json:"partitionEnd"`
+	Indexes        map[string]indexer.Indexer `json:"indexes"`
+	Metadata       map[string]interface{}     `json:"metadata"`
 }
 
 func NewIndexManager(dir string) *IndexManager {
@@ -35,25 +44,27 @@ func NewIndexManager(dir string) *IndexManager {
 
 	return &IndexManager{
 		directory: dir,
-		Indexes:   make(map[string]indexer.Indexer, 10),
+		internal: &internalData{
+			Indexes: make(map[string]indexer.Indexer, 10),
+		},
 	}
 }
 
 // CreateIndex is needed to be designed this way to avoid many complications in type casting and generics
 func CreateIndex[T indexer.ValidType](m *IndexManager, columnName string, indexType indexer.IndexType) error {
-	if m.Indexes[columnName] != nil {
+	if m.internal.Indexes[columnName] != nil {
 		return fmt.Errorf("index already existing for column %s", columnName)
 	}
 
 	switch indexType {
 	case indexer.TextInvertedIndex:
-		m.Indexes[columnName] = textinvertedindex.New[T](columnName)
+		m.internal.Indexes[columnName] = textinvertedindex.New[T](columnName)
 	case indexer.BitmapIndex:
-		m.Indexes[columnName] = bitmapindex.New[T](columnName)
+		m.internal.Indexes[columnName] = bitmapindex.New[T](columnName)
 	case indexer.RangeIndex:
-		m.Indexes[columnName] = rangeindex.New[T](columnName)
+		m.internal.Indexes[columnName] = rangeindex.New[T](columnName)
 	case indexer.SortedIndex:
-		m.Indexes[columnName] = sortedindex.New[T](columnName)
+		m.internal.Indexes[columnName] = sortedindex.New[T](columnName)
 	default:
 		return fmt.Errorf("wrong index type %s", indexType)
 	}
@@ -64,7 +75,7 @@ func (m *IndexManager) Add(columnName string, id string, value interface{}) bool
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	idx, ok := m.Indexes[columnName]
+	idx, ok := m.internal.Indexes[columnName]
 	if !ok {
 		log.Error().Msgf("no index for column %s", columnName)
 		return false
@@ -74,7 +85,7 @@ func (m *IndexManager) Add(columnName string, id string, value interface{}) bool
 }
 
 func (m *IndexManager) QueryIndex(columnName string, value interface{}) []uint32 {
-	idx, ok := m.Indexes[columnName]
+	idx, ok := m.internal.Indexes[columnName]
 	if !ok {
 		log.Error().Msgf("no index for column %s", columnName)
 		return nil
@@ -82,7 +93,7 @@ func (m *IndexManager) QueryIndex(columnName string, value interface{}) []uint32
 	return idx.Search(value)
 }
 
-func (m *IndexManager) PersistToDisk() error {
+func (m *IndexManager) PersistToDisk(segmentID, partitionStart, partitionEnd string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -102,11 +113,17 @@ func (m *IndexManager) PersistToDisk() error {
 		}()
 	}
 
+	// store extra infos before marshaling
+	m.internal.SegmentID = segmentID
+	m.internal.PartitionStart = partitionStart
+	m.internal.PartitionEnd = partitionEnd
+
 	// marshal and compress with Brotli to save space
-	buffer, err := json.Marshal(&m)
+	buffer, err := json.Marshal(&m.internal)
 	if err != nil {
 		return err
 	}
+
 	// buffer, err := utils.CompressBrotli(buf)
 	// if err != nil {
 	// 	return err
@@ -136,8 +153,11 @@ func ReadIndexFile(dir string) (*IndexManager, error) {
 	// 	return nil, err
 	// }
 
-	im := &IndexManager{}
-	if err = json.Unmarshal(buffer, &im); err != nil {
+	im := &IndexManager{
+		directory: dir,
+		mu:        sync.Mutex{},
+	}
+	if err = json.Unmarshal(buffer, im); err != nil {
 		log.Error().Msg(err.Error())
 		return nil, err
 	}
@@ -145,17 +165,81 @@ func ReadIndexFile(dir string) (*IndexManager, error) {
 	return im, err
 }
 
-type IndexManagerJSON struct {
+type internalDataJSON struct {
+	SegmentID      string                 `json:"segmentId"`
+	PartitionStart string                 `json:"partitionStart"`
+	PartitionEnd   string                 `json:"partitionEnd"`
+	Metadata       map[string]interface{} `json:"metadata"`
+	Indexes        map[string]struct {
+		Metadata indexMetadataJSON `json:"metadata"`
+		Index    json.RawMessage   `json:"index"`
+	} `json:"indexes"`
 }
 
-// func (i *IndexManager) UnmarshalJSON(data []byte) error {
-// 	bitmapIndexes := []aliasJSON[T]{}
-// 	if err := json.Unmarshal(data, &bitmapIndexes); err != nil {
-// 		return err
-// 	}
-// 	for _, bi := range bitmapIndexes {
-// 		bm := bitmap.FromBytes(bi.Ids)
-// 		i.Index[bi.Key] = &bm
-// 	}
-// 	return nil
-// }
+type indexMetadataJSON struct {
+	CastType   uint              `json:"castType"`
+	IndexType  indexer.IndexType `json:"type"`
+	ColumnName string            `json:"column"`
+}
+
+func (m *IndexManager) UnmarshalJSON(data []byte) error {
+	var err error
+	id := internalDataJSON{}
+	if err = json.Unmarshal(data, &id); err != nil {
+		return err
+	}
+
+	m.internal = &internalData{
+		SegmentID:      id.SegmentID,
+		PartitionStart: id.PartitionStart,
+		PartitionEnd:   id.PartitionEnd,
+		Indexes:        make(map[string]indexer.Indexer, len(id.Indexes)),
+	}
+	for dim, idx := range id.Indexes {
+		if err := creatNewIndexUnmarshal(m, dim, idx.Metadata.IndexType, idx.Metadata.CastType); err != nil {
+			return err
+		}
+		if err := m.internal.Indexes[dim].Deserialize(idx.Index); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func creatNewIndexUnmarshal(m *IndexManager, dim string, it indexer.IndexType, ct uint) error {
+	var err error
+	switch ct {
+	case uint(reflect.Int):
+		err = CreateIndex[int](m, dim, it)
+	case uint(reflect.Int8):
+		err = CreateIndex[int8](m, dim, it)
+	case uint(reflect.Int16):
+		err = CreateIndex[int16](m, dim, it)
+	case uint(reflect.Int32):
+		err = CreateIndex[int32](m, dim, it)
+	case uint(reflect.Int64):
+		err = CreateIndex[int64](m, dim, it)
+	case uint(reflect.Uint):
+		err = CreateIndex[uint](m, dim, it)
+	case uint(reflect.Uint8):
+		err = CreateIndex[uint8](m, dim, it)
+	case uint(reflect.Uint16):
+		err = CreateIndex[uint16](m, dim, it)
+	case uint(reflect.Uint32):
+		err = CreateIndex[uint32](m, dim, it)
+	case uint(reflect.Uint64):
+		err = CreateIndex[uint64](m, dim, it)
+	case uint(reflect.Float32):
+		err = CreateIndex[float32](m, dim, it)
+	case uint(reflect.Float64):
+		err = CreateIndex[float64](m, dim, it)
+	case uint(reflect.String):
+		err = CreateIndex[string](m, dim, it)
+	default:
+		return fmt.Errorf("wrong type cast (uint %x) for index", ct)
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}

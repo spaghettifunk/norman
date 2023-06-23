@@ -3,7 +3,7 @@ package utils
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"strings"
 	"unicode"
@@ -46,5 +46,5 @@ func CompressBrotli(data []byte) ([]byte, error) {
 func DecompressBrotli(data []byte) ([]byte, error) {
 	br := bytes.NewReader(data)
 	decompressor := brotli.NewReader(br)
-	return ioutil.ReadAll(decompressor)
+	return io.ReadAll(decompressor)
 }

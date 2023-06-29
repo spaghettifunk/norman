@@ -7,7 +7,7 @@ import (
 	"github.com/google/btree"
 	"github.com/rs/zerolog/log"
 	"github.com/segmentio/fasthash/fnv1a"
-	"github.com/spaghettifunk/norman/pkg/indexer"
+	"github.com/spaghettifunk/norman/internal/storage/indexer"
 )
 
 const (

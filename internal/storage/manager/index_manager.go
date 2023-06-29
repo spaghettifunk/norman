@@ -12,12 +12,12 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spaghettifunk/norman/internal/common/utils"
-	"github.com/spaghettifunk/norman/pkg/indexer"
+	"github.com/spaghettifunk/norman/internal/storage/indexer"
 
-	bitmapindex "github.com/spaghettifunk/norman/pkg/indexer/bitmap"
-	textinvertedindex "github.com/spaghettifunk/norman/pkg/indexer/inverted/text"
-	rangeindex "github.com/spaghettifunk/norman/pkg/indexer/range"
-	sortedindex "github.com/spaghettifunk/norman/pkg/indexer/sorted"
+	bitmapindex "github.com/spaghettifunk/norman/internal/storage/indexer/bitmap"
+	textinvertedindex "github.com/spaghettifunk/norman/internal/storage/indexer/inverted/text"
+	rangeindex "github.com/spaghettifunk/norman/internal/storage/indexer/range"
+	sortedindex "github.com/spaghettifunk/norman/internal/storage/indexer/sorted"
 )
 
 const (

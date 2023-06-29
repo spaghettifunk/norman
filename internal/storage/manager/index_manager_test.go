@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/spaghettifunk/norman/pkg/indexer"
+	"github.com/spaghettifunk/norman/internal/storage/indexer"
 	"github.com/stretchr/testify/assert"
 )
 

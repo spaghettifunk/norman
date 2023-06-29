@@ -10,6 +10,7 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gofiber/fiber/v2 v2.46.0
 	github.com/gofiber/swagger v0.1.12
+	github.com/google/btree v1.1.2
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/consul/api v1.20.0
 	github.com/kelindar/bitmap v1.5.0
@@ -37,7 +38,6 @@ require (
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/btree v1.1.2 // indirect
 	github.com/google/flatbuffers v23.5.26+incompatible // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
@@ -86,6 +86,7 @@ require (
 	github.com/swaggo/files/v2 v2.0.0 // indirect
 	github.com/swaggo/swag v1.16.1 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
+	github.com/twpayne/go-geom v1.5.2 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.47.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect

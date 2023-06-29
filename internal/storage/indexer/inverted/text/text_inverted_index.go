@@ -7,8 +7,8 @@ import (
 	"github.com/RoaringBitmap/roaring"
 	"github.com/rs/zerolog/log"
 	"github.com/segmentio/fasthash/fnv1a"
+	"github.com/spaghettifunk/norman/internal/storage/indexer"
 	"github.com/spaghettifunk/norman/pkg/containers/mapset"
-	"github.com/spaghettifunk/norman/pkg/indexer"
 )
 
 type TextInvertedIndex[T indexer.ValidType] struct {

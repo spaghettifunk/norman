@@ -1,7 +1,7 @@
 package manager
 
 import (
-	startreeindex "github.com/spaghettifunk/norman/pkg/indexer/startree"
+	startreeindex "github.com/spaghettifunk/norman/internal/storage/indexer/startree"
 )
 
 type StarTreeIndexManager[T startreeindex.ValidTypes] struct {

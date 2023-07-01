@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"math"
 	"strings"
-
-	"github.com/twpayne/go-geom"
 )
 
 // DimError represents a failure due to mismatched dimensions.
@@ -132,7 +130,7 @@ func (p Point) minMaxDist(r Rect) float64 {
 // Rect represents a subset of n-dimensional Euclidean space of the form
 // [a1, b1] x [a2, b2] x ... x [an, bn], where ai < bi for all 1 <= i <= n.
 type Rect struct {
-	p, q geom.Coord // Enforced by NewRect: p[i] <= q[i] for all i.
+	p, q Point // Enforced by NewRect: p[i] <= q[i] for all i.
 }
 
 // PointCoord returns the coordinate of the point of the rectangle at i
@@ -172,7 +170,7 @@ func (r Rect) String() string {
 // NewRect constructs and returns a pointer to a Rect given a corner point and
 // the lengths of each dimension.  The point p should be the most-negative point
 // on the rectangle (in every dimension) and every length should be positive.
-func NewRect(p geom.Coord, lengths []float64) (r Rect, err error) {
+func NewRect(p Point, lengths []float64) (r Rect, err error) {
 	r.p = p
 	if len(p) != len(lengths) {
 		err = &DimError{len(p), len(lengths)}
@@ -336,10 +334,10 @@ func (p Point) ToRect(tol float64) Rect {
 }
 
 // boundingBox constructs the smallest rectangle containing both r1 and r2.
-func boundingBox(r1, r2 Rect) (bb *geom.Bounds) {
+func boundingBox(r1, r2 Rect) (bb Rect) {
 	dim := len(r1.p)
-	bb.SetCoords(make([]float64, dim), make([]float64, dim))
-
+	bb.p = make([]float64, dim)
+	bb.q = make([]float64, dim)
 	if len(r2.p) != dim {
 		panic(DimError{dim, len(r2.p)})
 	}

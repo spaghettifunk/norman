@@ -9,14 +9,12 @@ import (
 	"fmt"
 	"math"
 	"sort"
-
-	"github.com/twpayne/go-geom"
 )
 
 // Comparator compares two spatials and returns whether they are equal.
-type Comparator func(obj1, obj2 geom.T) (equal bool)
+type Comparator func(obj1, obj2 Spatial) (equal bool)
 
-func defaultComparator(obj1, obj2 geom.T) bool {
+func defaultComparator(obj1, obj2 Spatial) bool {
 	return obj1 == obj2
 }
 
@@ -39,7 +37,7 @@ type Rtree struct {
 // NewTree returns an Rtree. If the number of objects given on initialization
 // is larger than max, the Rtree will be initialized using the Overlap
 // Minimizing Top-down bulk-loading algorithm.
-func NewTree(dim, min, max int, objs ...geom.T) *Rtree {
+func NewTree(dim, min, max int, objs ...Spatial) *Rtree {
 	rt := &Rtree{
 		Dim:         dim,
 		MinChildren: min,
@@ -111,7 +109,7 @@ func sortByDim(dim int, objs []entry) {
 
 // bulkLoad bulk loads the Rtree using OMT algorithm. bulkLoad contains special
 // handling for the root node.
-func (tree *Rtree) bulkLoad(objs []geom.T) {
+func (tree *Rtree) bulkLoad(objs []Spatial) {
 	n := len(objs)
 
 	// create entries for all the objects
@@ -226,9 +224,9 @@ func (n *node) String() string {
 
 // entry represents a spatial index record stored in a tree node.
 type entry struct {
-	bb    *geom.Bounds // bounding-box of all children of this entry
+	bb    Rect // bounding-box of all children of this entry
 	child *node
-	obj   geom.T
+	obj   Spatial
 }
 
 func (e entry) String() string {
@@ -238,6 +236,11 @@ func (e entry) String() string {
 	return fmt.Sprintf("entry{bb: %v, obj: %v}", e.bb, e.obj)
 }
 
+// Spatial is an interface for objects that can be stored in an Rtree and queried.
+type Spatial interface {
+	Bounds() Rect
+}
+
 // Insertion
 
 // Insert inserts a spatial object into the tree.  If insertion
@@ -245,7 +248,7 @@ func (e entry) String() string {
 //
 // Implemented per Section 3.2 of "R-trees: A Dynamic Index Structure for
 // Spatial Searching" by A. Guttman, Proceedings of ACM SIGMOD, p. 47-57, 1984.
-func (tree *Rtree) Insert(obj geom.T) {
+func (tree *Rtree) Insert(obj Spatial) {
 	e := entry{obj.Bounds(), nil, obj}
 	tree.insert(e, 1)
 	tree.size++
@@ -353,7 +356,7 @@ func (n *node) getEntry() *entry {
 }
 
 // computeBoundingBox finds the MBR of the children of n.
-func (n *node) computeBoundingBox() (bb *geom.Bounds) {
+func (n *node) computeBoundingBox() (bb Rect) {
 	if len(n.entries) == 1 {
 		bb = n.entries[0].bb
 		return
@@ -513,7 +516,7 @@ func pickNext(left, right *node, entries []entry) (next int) {
 //
 // Implemented per Section 3.3 of "R-trees: A Dynamic Index Structure for
 // Spatial Searching" by A. Guttman, Proceedings of ACM SIGMOD, p. 47-57, 1984.
-func (tree *Rtree) Delete(obj geom.T) bool {
+func (tree *Rtree) Delete(obj Spatial) bool {
 	return tree.DeleteWithComparator(obj, defaultComparator)
 }
 
@@ -521,7 +524,7 @@ func (tree *Rtree) Delete(obj geom.T) bool {
 // comparator for evaluating equalness. This is useful when you want to remove
 // an object from a tree but don't have a pointer to the original object
 // anymore.
-func (tree *Rtree) DeleteWithComparator(obj geom.T, cmp Comparator) bool {
+func (tree *Rtree) DeleteWithComparator(obj Spatial, cmp Comparator) bool {
 	n := tree.findLeaf(tree.root, obj, cmp)
 	if n == nil {
 		return false
@@ -552,7 +555,7 @@ func (tree *Rtree) DeleteWithComparator(obj geom.T, cmp Comparator) bool {
 }
 
 // findLeaf finds the leaf node containing obj.
-func (tree *Rtree) findLeaf(n *node, obj geom.T, cmp Comparator) *node {
+func (tree *Rtree) findLeaf(n *node, obj Spatial, cmp Comparator) *node {
 	if n.leaf {
 		return n
 	}
@@ -628,8 +631,8 @@ func (tree *Rtree) condenseTree(n *node) {
 // SearchIntersect returns all objects that intersect the specified rectangle.
 // Implemented per Section 3.1 of "R-trees: A Dynamic Index Structure for
 // Spatial Searching" by A. Guttman, Proceedings of ACM SIGMOD, p. 47-57, 1984.
-func (tree *Rtree) SearchIntersect(bb Rect, filters ...Filter) []geom.T {
-	return tree.searchIntersect([]geom.T{}, tree.root, bb, filters)
+func (tree *Rtree) SearchIntersect(bb Rect, filters ...Filter) []Spatial {
+	return tree.searchIntersect([]Spatial{}, tree.root, bb, filters)
 }
 
 // SearchIntersectWithLimit is similar to SearchIntersect, but returns
@@ -638,7 +641,7 @@ func (tree *Rtree) SearchIntersect(bb Rect, filters ...Filter) []geom.T {
 //
 // Kept for backwards compatibility, please use SearchIntersect with a
 // LimitFilter.
-func (tree *Rtree) SearchIntersectWithLimit(k int, bb Rect) []geom.T {
+func (tree *Rtree) SearchIntersectWithLimit(k int, bb Rect) []Spatial {
 	// backwards compatibility, previous implementation didn't limit results if
 	// k was negative.
 	if k < 0 {
@@ -647,7 +650,7 @@ func (tree *Rtree) SearchIntersectWithLimit(k int, bb Rect) []geom.T {
 	return tree.SearchIntersect(bb, LimitFilter(k))
 }
 
-func (tree *Rtree) searchIntersect(results []geom.T, n *node, bb Rect, filters []Filter) []geom.T {
+func (tree *Rtree) searchIntersect(results []Spatial, n *node, bb Rect, filters []Filter) []Spatial {
 	for _, e := range n.entries {
 		if !intersect(e.bb, bb) {
 			continue
@@ -672,7 +675,7 @@ func (tree *Rtree) searchIntersect(results []geom.T, n *node, bb Rect, filters [
 
 // NearestNeighbor returns the closest object to the specified point.
 // Implemented per "Nearest Neighbor Queries" by Roussopoulos et al
-func (tree *Rtree) NearestNeighbor(p Point) geom.T {
+func (tree *Rtree) NearestNeighbor(p Point) Spatial {
 	obj, _ := tree.nearestNeighbor(p, tree.root, math.MaxFloat64, nil)
 	return obj
 }
@@ -752,7 +755,7 @@ func pruneEntriesMinDist(d float64, entries []entry, minDists []float64) []entry
 	return entries[:i]
 }
 
-func (tree *Rtree) nearestNeighbor(p Point, n *node, d float64, nearest geom.T) (geom.T, float64) {
+func (tree *Rtree) nearestNeighbor(p Point, n *node, d float64, nearest Spatial) (Spatial, float64) {
 	if n.leaf {
 		for _, e := range n.entries {
 			dist := math.Sqrt(p.minDist(e.bb))
@@ -796,7 +799,7 @@ func (tree *Rtree) nearestNeighbor(p Point, n *node, d float64, nearest geom.T) 
 }
 
 // NearestNeighbors gets the closest Spatials to the Point.
-func (tree *Rtree) NearestNeighbors(k int, p Point, filters ...Filter) []geom.T {
+func (tree *Rtree) NearestNeighbors(k int, p Point, filters ...Filter) []Spatial {
 	// preallocate the buffers for sortings the branches. At each level of the
 	// tree, we slide the buffer by the number of entries in the node.
 	maxBufSize := tree.MaxChildren * tree.Depth()
@@ -805,14 +808,14 @@ func (tree *Rtree) NearestNeighbors(k int, p Point, filters ...Filter) []geom.T 
 
 	// allocate the buffers for the results
 	dists := make([]float64, 0, k)
-	objs := make([]geom.T, 0, k)
+	objs := make([]Spatial, 0, k)
 
 	objs, _, _ = tree.nearestNeighbors(k, p, tree.root, dists, objs, filters, branches, branchDists)
 	return objs
 }
 
 // insert obj into nearest and return the first k elements in increasing order.
-func insertNearest(k int, dists []float64, nearest []geom.T, dist float64, obj geom.T, filters []Filter) ([]float64, []geom.T, bool) {
+func insertNearest(k int, dists []float64, nearest []Spatial, dist float64, obj Spatial, filters []Filter) ([]float64, []Spatial, bool) {
 	i := sort.SearchFloat64s(dists, dist)
 	for i < len(nearest) && dist >= dists[i] {
 		i++
@@ -844,7 +847,7 @@ func insertNearest(k int, dists []float64, nearest []geom.T, dist float64, obj g
 	return dists, nearest, false
 }
 
-func (tree *Rtree) nearestNeighbors(k int, p Point, n *node, dists []float64, nearest []geom.T, filters []Filter, b []entry, bd []float64) ([]geom.T, []float64, bool) {
+func (tree *Rtree) nearestNeighbors(k int, p Point, n *node, dists []float64, nearest []Spatial, filters []Filter, b []entry, bd []float64) ([]Spatial, []float64, bool) {
 	var abort bool
 	if n.leaf {
 		for _, e := range n.entries {

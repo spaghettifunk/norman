@@ -31,18 +31,15 @@ func New[G geom.T](columnName string, dimensions int) *GeospatialIndex[G] {
 			IndexType:  indexer.GeospatialIndex,
 			ColumnName: columnName,
 		},
-		Index: *rtreego.NewTree(dimensions, 4, 12),
 	}
 }
 
 func (i *GeospatialIndex[G]) AddValue(id string, value interface{}) bool {
-	loc, ok := value.(geom.T)
+	_, ok := value.(geom.T)
 	if !ok {
 		log.Error().Msg("value cannot be casted to ValidType")
 		return false
 	}
-
-	i.Index.Insert()
 
 	return true
 }

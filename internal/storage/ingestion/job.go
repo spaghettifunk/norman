@@ -9,6 +9,7 @@ import (
 
 	"github.com/spaghettifunk/norman/internal/common/entities"
 	cingestion "github.com/spaghettifunk/norman/internal/common/ingestion"
+	"github.com/spaghettifunk/norman/internal/storage/indexer"
 	"github.com/spaghettifunk/norman/internal/storage/ingestion/realtime/kafka"
 	"github.com/spaghettifunk/norman/internal/storage/ingestion/realtime/kinesis"
 	"github.com/spaghettifunk/norman/internal/storage/manager"
@@ -36,8 +37,15 @@ func NewJob(cfg *cingestion.IngestionJobConfiguration, table *entities.Table) (*
 		return nil, err
 	}
 
-	// create new TableManager
-	tm, err := manager.NewTableManager(table)
+	// create new TableManager with its indexes from configuration
+	indexes := map[indexer.IndexType][]string{
+		indexer.BitmapIndex:       cfg.IndexConfiguration.BitmapIndexColumns,
+		indexer.RangeIndex:        cfg.IndexConfiguration.RangeIndexColumns,
+		indexer.SortedIndex:       cfg.IndexConfiguration.SortedIndexColumn,
+		indexer.TextInvertedIndex: cfg.IndexConfiguration.TextInvertedIndexColumns,
+		indexer.GeospatialIndex:   cfg.IndexConfiguration.GeospatialIndexColumns,
+	}
+	tm, err := manager.NewTableManager(table, indexes)
 	if err != nil {
 		return nil, err
 	}

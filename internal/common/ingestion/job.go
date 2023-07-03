@@ -23,7 +23,7 @@ type IngestionJobConfiguration struct {
 	ID                     uuid.UUID               `json:"id,omitempty"`
 	Name                   string                  `json:"name"`
 	Type                   IngestionType           `json:"type"`
-	IndexConfiguration     *indexConfiguration     `json:"indexConfiguration,omitempty"`
+	IndexConfiguration     *IndexConfiguration     `json:"indexConfiguration,omitempty"`
 	TenantConfiguration    *tenantConfiguration    `json:"tenantConfiguration,omitempty"`
 	Metadata               map[string]interface{}  `json:"metadata,omitempty"`
 	IngestionConfiguration *ingestionConfiguration `json:"ingestionConfiguration"`
@@ -65,17 +65,16 @@ type ingestionConfiguration struct {
 	} `json:"realtime,omitempty"`
 }
 
-// indexConfiguration is used to set the way the data is indexed in the Storage
-type indexConfiguration struct {
-	InvertedIndexColumns                       []string               `json:"invertedIndexColumns,omitempty"`
+// IndexConfiguration is used to set the way the data is indexed in the Storage
+type IndexConfiguration struct {
+	TextInvertedIndexColumns                   []string               `json:"textInvertedIndexColumns,omitempty"`
 	CreateInvertedIndexDuringSegmentGeneration bool                   `json:"createInvertedIndexDuringSegmentGeneration,omitempty"`
-	SortedColumn                               []string               `json:"sortedColumn,omitempty"`
+	SortedIndexColumn                          []string               `json:"sortedIndexColumn,omitempty"`
+	RangeIndexColumns                          []string               `json:"rangeIndexColumns,omitempty"`
+	BitmapIndexColumns                         []string               `json:"bitmapIndexColumns,omitempty"`
+	GeospatialIndexColumns                     []string               `json:"geospatialIndexColumns,omitempty"`
 	BloomFilterColumns                         []string               `json:"bloomFilterColumns,omitempty"`
 	StarTreeIndexConfigs                       map[string]interface{} `json:"starTreeIndexConfigs,omitempty"`
-	NoDictionaryColumns                        []string               `json:"noDictionaryColumns,omitempty"`
-	RangeIndexColumns                          []string               `json:"rangeIndexColumns,omitempty"`
-	OnHeapDictionaryColumns                    []string               `json:"onHeapDictionaryColumns,omitempty"`
-	VarLengthDictionaryColumns                 []string               `json:"varLengthDictionaryColumns,omitempty"`
 	SegmentPartitionConfiguration              struct {
 		Column struct {
 			Name          string `json:"name,omitempty"`

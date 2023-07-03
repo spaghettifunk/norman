@@ -46,7 +46,7 @@ func New() *Consul {
 
 // Start Register the service in the consul pool of services
 func (c *Consul) Start(s service.Service) error {
-	p, err := strconv.ParseInt(s.GetPort(), 10, 0)
+	p, err := strconv.Atoi(s.GetPort())
 	if err != nil {
 		return err
 	}

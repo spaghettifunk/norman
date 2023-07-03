@@ -18,10 +18,9 @@ const (
 )
 
 type TableManager struct {
-	Table          *entities.Table
-	SegmentManager *SegmentManager
-	IndexManager   *IndexManager
-
+	Table             *entities.Table
+	SegmentManager    *SegmentManager
+	IndexManager      *IndexManager
 	baseDir           string
 	datetimeFieldName string
 	wg                sync.WaitGroup

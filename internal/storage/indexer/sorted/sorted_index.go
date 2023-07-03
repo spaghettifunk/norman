@@ -25,7 +25,7 @@ type indexItem[T indexer.ValidType] struct {
 }
 
 func Less[T indexer.ValidType]() btree.LessFunc[indexItem[T]] {
-	return func(a, b indexItem[T]) bool {		
+	return func(a, b indexItem[T]) bool {
 		return a.Value < b.Value
 	}
 }

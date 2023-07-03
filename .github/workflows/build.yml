@@ -5,9 +5,9 @@ name: build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   run:
@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        go: ['stable', 'oldstable']
+        go: ["stable"]
 
     steps:
       - name: Check out code

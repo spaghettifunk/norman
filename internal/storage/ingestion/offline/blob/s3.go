@@ -2,6 +2,7 @@ package offline_blob
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -124,7 +125,10 @@ func (c *S3Client) UploadS3File(fileDir string, bucket *S3Bucket) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+
+	defer func() {
+		err = errors.Join(err, file.Close())
+	}()
 
 	// Get file size and read the file content into a buffer
 	fileInfo, _ := file.Stat()

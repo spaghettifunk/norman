@@ -8,6 +8,7 @@ import (
 	cingestion "github.com/spaghettifunk/norman/internal/common/ingestion"
 	"github.com/spaghettifunk/norman/internal/storage/ingestion"
 	"github.com/spaghettifunk/norman/pkg/consul"
+	"github.com/spaghettifunk/norman/pkg/eventmanager"
 	"github.com/spaghettifunk/norman/pkg/workerpool"
 )
 
@@ -35,6 +36,13 @@ func NewIngestionJobManager(c *consul.Consul) (*IngestionJobManager, error) {
 
 func (ijm *IngestionJobManager) Initialize() error {
 	ijm.WorkerPool.Start()
+
+	// register the events
+	eventmanager.GetEventManager().Subscribe(eventmanager.SegmentInitialized, ijm)
+	eventmanager.GetEventManager().Subscribe(eventmanager.SegmentCreated, ijm)
+	eventmanager.GetEventManager().Subscribe(eventmanager.SegmentIndexed, ijm)
+	eventmanager.GetEventManager().Subscribe(eventmanager.SegmentErrored, ijm)
+
 	return nil
 }
 
@@ -84,4 +92,23 @@ func (ijm *IngestionJobManager) Execute(config *cingestion.IngestionJobConfigura
 func (ijm *IngestionJobManager) Shutdown() error {
 	ijm.WorkerPool.Stop()
 	return nil
+}
+
+func (ijm *IngestionJobManager) OnNotify(event eventmanager.Event) {
+	switch event.Type {
+	case eventmanager.SegmentInitialized:
+		log.Info().Msgf("event fired %s with data %x", event.Type, event.Data)
+		return
+	case eventmanager.SegmentCreated:
+		log.Info().Msgf("event fired %s with data %x", event.Type, event.Data)
+		return
+	case eventmanager.SegmentIndexed:
+		log.Info().Msgf("event fired %s with data %x", event.Type, event.Data)
+		return
+	case eventmanager.SegmentErrored:
+		log.Info().Msgf("event fired %s with data %x", event.Type, event.Data)
+		return
+	default:
+		return
+	}
 }

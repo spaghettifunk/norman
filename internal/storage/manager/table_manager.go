@@ -10,6 +10,7 @@ import (
 	"github.com/spaghettifunk/norman/internal/common/entities"
 	"github.com/spaghettifunk/norman/internal/common/types"
 	"github.com/spaghettifunk/norman/internal/storage/indexer"
+	"github.com/spaghettifunk/norman/pkg/eventmanager"
 )
 
 const (
@@ -82,8 +83,11 @@ func (t *TableManager) CreateNewSegment() error {
 		return err
 	}
 
-	// TODO: advertise that a new segment is created
-	// ...
+	// fire segment initialized event
+	eventmanager.GetEventManager().Notify(eventmanager.Event{
+		Type: eventmanager.SegmentInitialized,
+		Data: t.baseDir,
+	})
 
 	return nil
 }
@@ -116,8 +120,17 @@ func (t *TableManager) FlushSegment() error {
 		return err
 	}
 
-	// TODO: publish segment to consul
-	// ...
+	sID := t.SegmentManager.GetSegmentID()
+	if err := t.IndexManager.PersistToDisk(sID, t.IndexManager.internal.PartitionStart,
+		t.IndexManager.internal.PartitionEnd); err != nil {
+		return err
+	}
+
+	// fire segment initialized event
+	eventmanager.GetEventManager().Notify(eventmanager.Event{
+		Type: eventmanager.SegmentCreated,
+		Data: true,
+	})
 
 	return nil
 }

@@ -65,6 +65,10 @@ func (s *SegmentManager) Create(schema *arrow.Schema) error {
 	return nil
 }
 
+func (s *SegmentManager) GetSegmentID() string {
+	return s.activeSegment.ID.String()
+}
+
 // AppendData appends to the apache arrow record the incoming data. It returns the EventID if everything is successful
 func (s *SegmentManager) AppendData(event map[string]interface{}, datetimeFieldName string, granularityUnit time.Duration) (string, error) {
 	// Get the timestamp of the consumed message
@@ -120,6 +124,7 @@ func (s *SegmentManager) Flush() error {
 	}
 	// store the active segments in the list of segments
 	s.segments = append(s.segments, s.activeSegment)
+
 	return nil
 }
 

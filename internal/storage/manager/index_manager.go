@@ -1,7 +1,6 @@
 package manager
 
 import (
-	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -40,9 +39,6 @@ type internalData struct {
 }
 
 func NewIndexManager(dir string) *IndexManager {
-	// register gob interfaces
-	gob.Register(map[string]indexer.Indexer{})
-
 	return &IndexManager{
 		directory: dir,
 		internal: &internalData{

@@ -60,7 +60,7 @@ func TestNewTableManager(t *testing.T) {
 		EventSchema: evtSchema,
 	}
 
-	tm, err := NewTableManager(table)
+	tm, err := NewTableManager(table, nil)
 	if err != nil {
 		t.Errorf("failed to create table manager with error: %s", err.Error())
 	}
@@ -77,7 +77,7 @@ func TestCreateNewSegment(t *testing.T) {
 		EventSchema: evtSchema,
 	}
 
-	tm, err := NewTableManager(table)
+	tm, err := NewTableManager(table, nil)
 	if err != nil {
 		t.Errorf("failed to create table manager with error: %s", err.Error())
 	}
@@ -98,7 +98,7 @@ func TestInsertData(t *testing.T) {
 		EventSchema: evtSchema,
 	}
 
-	tm, err := NewTableManager(table)
+	tm, err := NewTableManager(table, nil)
 	if err != nil {
 		t.Errorf("failed to create table manager with error: %s", err.Error())
 	}

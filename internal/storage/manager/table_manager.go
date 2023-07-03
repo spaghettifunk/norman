@@ -8,6 +8,8 @@ import (
 
 	"github.com/goccy/go-json"
 	"github.com/spaghettifunk/norman/internal/common/entities"
+	"github.com/spaghettifunk/norman/internal/common/types"
+	"github.com/spaghettifunk/norman/internal/storage/indexer"
 )
 
 const (
@@ -18,6 +20,7 @@ const (
 type TableManager struct {
 	Table          *entities.Table
 	SegmentManager *SegmentManager
+	IndexManager   *IndexManager
 
 	baseDir           string
 	datetimeFieldName string
@@ -25,7 +28,7 @@ type TableManager struct {
 	granularity       *entities.GranularitySpec
 }
 
-func NewTableManager(table *entities.Table) (*TableManager, error) {
+func NewTableManager(table *entities.Table, indexes map[indexer.IndexType][]string) (*TableManager, error) {
 	// TODO: this should depend on a folder that comes from Configuration
 	path, err := os.Getwd()
 	if err != nil {
@@ -52,9 +55,21 @@ func NewTableManager(table *entities.Table) (*TableManager, error) {
 		return nil, err
 	}
 
+	// create a new index manager
+	im := NewIndexManager(baseDir)
+	for indexType, columns := range indexes {
+		for _, column := range columns {
+			df := table.Schema.GetDimensionField(column)
+			if err := createColumnIndex(im, column, df.DataType, indexType); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return &TableManager{
 		Table:             table,
 		SegmentManager:    sm,
+		IndexManager:      im,
 		datetimeFieldName: dtField.Name,
 		baseDir:           baseDir,
 		wg:                sync.WaitGroup{},
@@ -81,12 +96,15 @@ func (t *TableManager) InsertData(data []byte) error {
 	}
 
 	// add the data to the current segment
-	if err := t.SegmentManager.AppendData(event, t.datetimeFieldName, t.granularity.UnitSpec); err != nil {
+	evtID, err := t.SegmentManager.AppendData(event, t.datetimeFieldName, t.granularity.UnitSpec)
+	if err != nil {
 		return err
 	}
 
-	// TODO: index the segment
-	// ...
+	// index the segment's value
+	for columnName, val := range event {
+		t.IndexManager.Add(columnName, evtID, val)
+	}
 
 	return nil
 }
@@ -103,4 +121,21 @@ func (t *TableManager) FlushSegment() error {
 	// ...
 
 	return nil
+}
+
+func createColumnIndex(im *IndexManager, column, dataType string, indexType indexer.IndexType) error {
+	switch dataType {
+	case types.Integer:
+		return CreateIndex[int](im, column, indexType)
+	case types.Long:
+		return CreateIndex[int64](im, column, indexType)
+	case types.Float:
+		return CreateIndex[float32](im, column, indexType)
+	case types.Double:
+		return CreateIndex[float64](im, column, indexType)
+	case types.String:
+		return CreateIndex[string](im, column, indexType)
+	default:
+		return fmt.Errorf("invalid type for creating an index")
+	}
 }

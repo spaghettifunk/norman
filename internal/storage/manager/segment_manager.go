@@ -65,7 +65,8 @@ func (s *SegmentManager) Create(schema *arrow.Schema) error {
 	return nil
 }
 
-func (s *SegmentManager) AppendData(event map[string]interface{}, datetimeFieldName string, granularityUnit time.Duration) error {
+// AppendData appends to the apache arrow record the incoming data. It returns the EventID if everything is successful
+func (s *SegmentManager) AppendData(event map[string]interface{}, datetimeFieldName string, granularityUnit time.Duration) (string, error) {
 	// Get the timestamp of the consumed message
 	dtVal := int64(event[datetimeFieldName].(float64))
 	eventTimestamp := time.Unix(0, dtVal*int64(time.Millisecond))
@@ -83,10 +84,10 @@ func (s *SegmentManager) AppendData(event map[string]interface{}, datetimeFieldN
 	// if the interval is passed then it creates a new partition
 	if !(eventTimestamp.After(s.partitionStart) && eventTimestamp.Before(partitionInterval)) {
 		if err := s.Flush(); err != nil {
-			return err
+			return "", err
 		}
 		if err := s.Create(s.schema); err != nil {
-			return err
+			return "", err
 		}
 		// Update the current partition and its start time
 		s.partition++
@@ -96,7 +97,7 @@ func (s *SegmentManager) AppendData(event map[string]interface{}, datetimeFieldN
 	s.processEvent(event)
 	s.eventsCounter++
 
-	return nil
+	return event[eventIDName].(string), nil
 }
 
 // this is processed concurrently considering that there can be hundreds of columns per event

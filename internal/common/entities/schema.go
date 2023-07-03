@@ -54,6 +54,15 @@ func (s *Schema) GetFullArrowSchema() (*arrow.Schema, error) {
 	return arrow.NewSchema(fields, nil), nil
 }
 
+func (s *Schema) GetDimensionField(name string) *DimensionFieldSpec {
+	for _, dim := range s.DimensionFieldSpecs {
+		if dim.Name == name {
+			return dim
+		}
+	}
+	return nil
+}
+
 func (s *Schema) GetDimensionFields() []arrow.Field {
 	fields := []arrow.Field{}
 	for _, dimension := range s.DimensionFieldSpecs {

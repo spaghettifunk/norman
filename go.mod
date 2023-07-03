@@ -17,6 +17,7 @@ require (
 	github.com/kljensen/snowball v0.8.0
 	github.com/rs/zerolog v1.29.1
 	github.com/stretchr/testify v1.8.4
+	github.com/twpayne/go-geom v1.5.2
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	google.golang.org/grpc v1.55.0
 	google.golang.org/protobuf v1.30.0
@@ -86,7 +87,6 @@ require (
 	github.com/swaggo/files/v2 v2.0.0 // indirect
 	github.com/swaggo/swag v1.16.1 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
-	github.com/twpayne/go-geom v1.5.2 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.47.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect

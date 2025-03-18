@@ -74,7 +74,7 @@ func (m *IndexManager) Add(columnName string, id string, value interface{}) bool
 
 	idx, ok := m.internal.Indexes[columnName]
 	if !ok {
-		log.Warn().Msgf("no index for column %s", columnName)
+		log.Debug().Msgf("no index for column %s", columnName)
 		return false
 	}
 
@@ -84,7 +84,7 @@ func (m *IndexManager) Add(columnName string, id string, value interface{}) bool
 func (m *IndexManager) QueryIndex(columnName string, value interface{}) []uint32 {
 	idx, ok := m.internal.Indexes[columnName]
 	if !ok {
-		log.Warn().Msgf("no index for column %s", columnName)
+		log.Debug().Msgf("no index for column %s", columnName)
 		return nil
 	}
 	return idx.Search(value)

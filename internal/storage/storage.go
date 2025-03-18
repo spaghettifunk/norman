@@ -10,7 +10,6 @@ import (
 	"github.com/rs/zerolog/log"
 	configuration "github.com/spaghettifunk/norman/internal/common"
 	"github.com/spaghettifunk/norman/internal/common/utils"
-	"github.com/spaghettifunk/norman/pkg/consul"
 	"google.golang.org/grpc"
 )
 
@@ -19,7 +18,6 @@ type StorageServer struct {
 	ID       uuid.UUID
 	Hostname string
 	server   *grpc.Server
-	consul   *consul.Consul
 	config   configuration.Configuration
 
 	shutdown     bool
@@ -30,12 +28,6 @@ type StorageServer struct {
 func New(config configuration.Configuration) (*StorageServer, error) {
 	id, err := uuid.NewUUID()
 	if err != nil {
-		return nil, err
-	}
-
-	// initialize consul client
-	cs := consul.New()
-	if err := cs.Init(); err != nil {
 		return nil, err
 	}
 
@@ -50,14 +42,13 @@ func New(config configuration.Configuration) (*StorageServer, error) {
 		ID:        id,
 		Hostname:  hn,
 		config:    config,
-		consul:    cs,
 		shutdowns: make(chan struct{}),
 	}, nil
 }
 
-func (st *StorageServer) setupServer(id string, cs *consul.Consul) error {
+func (st *StorageServer) setupServer(id string) error {
 	var err error
-	st.server, err = NewGRPCServer(id, cs)
+	st.server, err = NewGRPCServer(id)
 	if err != nil {
 		return err
 	}
@@ -83,15 +74,9 @@ func (st *StorageServer) setupServer(id string, cs *consul.Consul) error {
 func (st *StorageServer) StartServer(address string) error {
 	// register to consul
 	log.Info().Msg("register and declare Storage to Consul")
-	if err := st.consul.Start(st); err != nil {
-		return err
-	}
-	if err := st.consul.Declare(st); err != nil {
-		return err
-	}
 
 	log.Info().Msg("start gRPC server")
-	if err := st.setupServer(st.ID.String(), st.consul); err != nil {
+	if err := st.setupServer(st.ID.String()); err != nil {
 		return err
 	}
 	return nil
@@ -124,11 +109,6 @@ func (st *StorageServer) ShutdownGRPC() error {
 
 func (st *StorageServer) ShutdownServer() error {
 	// deregister to consul
-	log.Info().Msg("deregister Storage to Consul")
-	if err := st.consul.Stop(st); err != nil {
-		return err
-	}
-
 	log.Info().Msg("Shutting down server...")
 	return nil
 }

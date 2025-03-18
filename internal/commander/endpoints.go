@@ -80,12 +80,12 @@ func (c *Commander) CreateJob(ctx *fiber.Ctx) error {
 		})
 	}
 
-	if err := c.consul.PutIngestionJobConfiguration(&payload.Job); err != nil {
-		return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Failed to save ingestion job into Consul",
-			"error":   err.Error(),
-		})
-	}
+	// if err := c.consul.PutIngestionJobConfiguration(&payload.Job); err != nil {
+	// 	return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
+	// 		"message": "Failed to save ingestion job into Consul",
+	// 		"error":   err.Error(),
+	// 	})
+	// }
 
 	// call gRPC function to trigger the ingestion job
 	req := &storage_v1.CreateIngestionJobRequest{JobID: payload.Job.ID.String()}
@@ -137,12 +137,12 @@ func (c *Commander) CreateTable(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	if err := c.consul.PutTableConfiguration(&payload.Table); err != nil {
-		return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Failed to create Table",
-			"error":   err.Error(),
-		})
-	}
+	// if err := c.consul.PutTableConfiguration(&payload.Table); err != nil {
+	// 	return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
+	// 		"message": "Failed to create Table",
+	// 		"error":   err.Error(),
+	// 	})
+	// }
 	return ctx.Status(http.StatusOK).JSON(fiber.Map{
 		"message":   "Table created successfully",
 		"timestamp": time.Now().Format("2006-01-02 15:04:05"),

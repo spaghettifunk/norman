@@ -18,7 +18,6 @@ import (
 	"github.com/rs/zerolog/log"
 	configuration "github.com/spaghettifunk/norman/internal/common"
 	"github.com/spaghettifunk/norman/internal/common/utils"
-	"github.com/spaghettifunk/norman/pkg/consul"
 
 	storageproto "github.com/spaghettifunk/norman/proto/v1/storage"
 )
@@ -32,7 +31,6 @@ type Broker struct {
 	Name     string
 	ID       uuid.UUID
 	Hostname string
-	consul   *consul.Consul
 	config   configuration.Configuration
 	app      *fiber.App
 
@@ -57,12 +55,6 @@ func New(config configuration.Configuration) (*Broker, error) {
 		return nil, err
 	}
 
-	// initialize consul client
-	cs := consul.New()
-	if err := cs.Init(); err != nil {
-		return nil, err
-	}
-
 	// get the hostname from the machine
 	hn, err := os.Hostname()
 	if err != nil {
@@ -73,7 +65,6 @@ func New(config configuration.Configuration) (*Broker, error) {
 		Name:     "broker",
 		ID:       id,
 		Hostname: hn,
-		consul:   cs,
 		config:   config,
 		app:      app,
 	}
@@ -129,15 +120,6 @@ func (b *Broker) initializeGRPCClient() error {
 
 func (b *Broker) StartServer(address string) error {
 	var err error
-	// register to consul
-	log.Info().Msg("register and declare Commander to Consul")
-	if err := b.consul.Start(b); err != nil {
-		return err
-	}
-	if err := b.consul.Declare(b); err != nil {
-		return err
-	}
-
 	if err = b.initializeGRPCClient(); err != nil {
 		return err
 	}
@@ -147,12 +129,6 @@ func (b *Broker) StartServer(address string) error {
 }
 
 func (b *Broker) ShutdownServer() error {
-	// deregister to consul
-	log.Info().Msg("deregister Commander to Consul")
-	if err := b.consul.Stop(b); err != nil {
-		return err
-	}
-
 	// closing gRPC storage service client
 	log.Info().Msg("close gRCP client connection of Storage Service")
 	if err := b.storageGRPCConn.Close(); err != nil {

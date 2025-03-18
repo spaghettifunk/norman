@@ -16,7 +16,6 @@ import (
 
 	configuration "github.com/spaghettifunk/norman/internal/common"
 	"github.com/spaghettifunk/norman/internal/common/utils"
-	"github.com/spaghettifunk/norman/pkg/consul"
 	storageproto "github.com/spaghettifunk/norman/proto/v1/storage"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
@@ -34,7 +33,6 @@ type Commander struct {
 	Name     string
 	ID       uuid.UUID
 	Hostname string
-	consul   *consul.Consul
 	config   configuration.Configuration
 	app      *fiber.App
 
@@ -54,12 +52,6 @@ func New(config configuration.Configuration) (*Commander, error) {
 	// add default middleware
 	app.Use(recover.New())
 
-	// initialize consul client
-	cs := consul.New()
-	if err := cs.Init(); err != nil {
-		return nil, err
-	}
-
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return nil, err
@@ -75,7 +67,6 @@ func New(config configuration.Configuration) (*Commander, error) {
 		Name:     "commander",
 		ID:       id,
 		Hostname: hn,
-		consul:   cs,
 		config:   config,
 		app:      app,
 	}
@@ -122,14 +113,6 @@ func (c *Commander) setupRoutes() {
 func (c *Commander) StartServer(address string) error {
 	var err error
 	// register to consul
-	log.Info().Msg("register and declare Commander to Consul")
-	if err = c.consul.Start(c); err != nil {
-		return err
-	}
-	if err = c.consul.Declare(c); err != nil {
-		return err
-	}
-
 	if err = c.initializeGRPCClient(); err != nil {
 		return err
 	}
@@ -176,12 +159,6 @@ func (c *Commander) initializeGRPCClient() error {
 }
 
 func (c *Commander) ShutdownServer() error {
-	// deregister to consul
-	log.Info().Msg("deregister Commander to Consul")
-	if err := c.consul.Stop(c); err != nil {
-		return err
-	}
-
 	// closing gRPC storage service client
 	log.Info().Msg("close gRCP client connection of Storage Service")
 	if err := c.storageGRPCConn.Close(); err != nil {

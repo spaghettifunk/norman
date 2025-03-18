@@ -1,11 +1,5 @@
 # Configuration file running Norman locally
 
-title = "Configuration for Norman"
-
-[consul]
-address = "127.0.0.1"
-port = 8500
-
 [commander]
 address = "127.0.0.1"
 port = 8080

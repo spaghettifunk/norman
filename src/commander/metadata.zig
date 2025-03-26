@@ -7,16 +7,18 @@ pub const MetadataService = struct {
     filePath: []const u8,
     allocator: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator) MetadataService {
+    pub fn init(allocator: std.mem.Allocator) !MetadataService {
         const filePath = "metadata.db";
 
         // Check if the file exists
-        if (!fs.cwd().access(filePath, .{})) {
-            // File does not exist, create it with empty JSON array
-            var file = try fs.cwd().createFile(filePath, .{});
-            defer file.close();
-            try file.writer().print("[]"); // Initialize with an empty JSON array
-        }
+        fs.cwd().access(filePath, .{}) catch |err| {
+            if (err == std.posix.AccessError.FileNotFound) {
+                // File does not exist, create it with empty JSON array
+                var file = try fs.cwd().createFile(filePath, .{});
+                defer file.close();
+                try file.writer().writeAll("[]"); // Initialize with an empty JSON array
+            }
+        };
 
         return MetadataService{
             .filePath = filePath,
@@ -24,27 +26,27 @@ pub const MetadataService = struct {
         };
     }
 
-    pub fn insertLine(self: *MetadataService, newLine: struct { id: i64, name: []const u8, city: []const u8 }) !void {
+    pub fn insertLine(self: MetadataService, newLine: struct { id: i64, name: []const u8, city: []const u8 }) !void {
         var data = try self.readJson();
         defer data.deinit();
         try insertLineImpl(self.allocator, &data, newLine);
         try self.writeJson(data);
     }
 
-    pub fn deleteLine(self: *MetadataService, idToDelete: i64) !void {
+    pub fn deleteLine(self: MetadataService, idToDelete: i64) !void {
         var data = try self.readJson();
         defer data.deinit();
         try deleteLineImpl(&data, idToDelete);
         try self.writeJson(data);
     }
 
-    pub fn searchLine(self: *MetadataService, field: []const u8, value: []const u8) !?json.Object {
+    pub fn searchLine(self: MetadataService, field: []const u8, value: []const u8) !?json.Object {
         var data = try self.readJson();
         defer data.deinit();
         return searchLineImpl(data, field, value);
     }
 
-    fn readJson(self: *MetadataService) !json.Array {
+    fn readJson(self: MetadataService) !json.Array {
         var file = try fs.cwd().openFile(self.filePath, .{});
         defer file.close();
 
@@ -57,7 +59,7 @@ pub const MetadataService = struct {
         return try root.array();
     }
 
-    fn writeJson(self: *MetadataService, data: json.Array) !void {
+    fn writeJson(self: MetadataService, data: json.Array) !void {
         var file = try fs.cwd().createFile(self.filePath, .{ .truncate = true });
         defer file.close();
         const writer = file.writer();

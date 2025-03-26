@@ -4,34 +4,34 @@
     "dimensions": [
       {
         "name": "studentID",
-        "type": "INT"
+        "type": "int"
       },
       {
         "name": "firstName",
-        "type": "STRING"
+        "type": "string"
       },
       {
         "name": "lastName",
-        "type": "STRING"
+        "type": "string"
       },
       {
         "name": "gender",
-        "type": "STRING"
+        "type": "string"
       },
       {
         "name": "subject",
-        "type": "STRING"
+        "type": "string"
       }
     ],
     "metrics": [
       {
         "name": "score",
-        "type": "FLOAT"
+        "type": "float"
       }
     ],
     "datetime": {
       "name": "timestamp",
-      "type": "UNIXTIMESTAMP"
+      "type": "unixtimestamp"
     }
   }
 }

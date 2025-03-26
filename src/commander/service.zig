@@ -1,6 +1,7 @@
 const std = @import("std");
 const httpz = @import("httpz");
 const configuration = @import("../configuration.zig");
+const metadata = @import("metadata.zig");
 const version = @import("../const.zig").normanVersion;
 
 var server_instance: ?*httpz.Server(void) = null;
@@ -36,6 +37,21 @@ pub const Commander = struct {
         // blocks
         server_instance = &server;
         try server.listen();
+    }
+
+    fn initializeMetadataService(allocator: std.mem.Allocator) !void {
+        var service = metadata.MetadataService.init(allocator);
+        defer service.deinit();
+
+        try service.insertLine(.{ .id = 4, .name = "David", .city = "Paris" });
+        try service.deleteLine(2);
+
+        const searchResult = try service.searchLine("city", "Tokyo");
+        if (searchResult) |result| {
+            std.debug.print("Found: {}\n", .{result});
+        } else {
+            std.debug.print("Not found.\n", .{});
+        }
     }
 };
 

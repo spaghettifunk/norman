@@ -1,6 +1,7 @@
 const StorageType = enum([]u8) { disk = "disk", blobstorage = "blobstorage", kafka = "kafka", pulsar = "pulsar" };
 
 pub const IngestionJob = struct {
+    id: u64,
     name: []const u8,
     type_: StorageType,
     ingestionConfiguration: struct {
@@ -22,6 +23,7 @@ pub const IngestionJob = struct {
 const FieldType = enum([]u8) { int = "int", string = "string", float = "float", long = "long", unixtimestamp = "unixtimestamp" };
 
 pub const TableSpec = struct {
+    id: u64,
     name: []const u8,
     schema: struct {
         dimensions: []Dimension,

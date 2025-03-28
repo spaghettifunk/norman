@@ -63,6 +63,93 @@ pub const IngestionJob = struct {
     }
 };
 
+const FieldType = enum {
+    int,
+    string,
+    float,
+    long,
+    unixtimestamp,
+};
+
+pub const Table = struct {
+    id: u64,
+    name: []const u8,
+    schema: struct {
+        dimensions: []const Dimension,
+        metrics: []const Metric,
+        datetime: Datetime,
+    },
+
+    pub fn jsonStringify(self: Table, jw: anytype) !void {
+        try jw.beginObject();
+
+        try jw.objectField("id");
+        try jw.write(self.id);
+        try jw.objectField("name");
+        try jw.write(self.name);
+        try jw.objectField("schema");
+        try jw.beginObject();
+        try jw.objectField("dimensions");
+        try jw.beginArray();
+        for (self.schema.dimensions) |dimension| {
+            try dimension.jsonStringify(jw);
+        }
+        try jw.endArray();
+        try jw.objectField("metrics");
+        try jw.beginArray();
+        for (self.schema.metrics) |metric| {
+            try metric.jsonStringify(jw);
+        }
+        try jw.endArray();
+        try jw.objectField("datetime");
+        try self.schema.datetime.jsonStringify(jw);
+        try jw.endObject();
+        try jw.endObject();
+    }
+};
+
+pub const Dimension = struct {
+    name: []const u8,
+    type_: FieldType,
+
+    pub fn jsonStringify(self: Dimension, jw: anytype) !void {
+        try jw.beginObject();
+        try jw.objectField("name");
+        try jw.write(self.name);
+        try jw.objectField("type");
+        try jw.write(self.type_);
+        try jw.endObject();
+    }
+};
+
+pub const Metric = struct {
+    name: []const u8,
+    type_: FieldType,
+
+    pub fn jsonStringify(self: Metric, jw: anytype) !void {
+        try jw.beginObject();
+        try jw.objectField("name");
+        try jw.write(self.name);
+        try jw.objectField("type");
+        try jw.write(self.type_);
+        try jw.endObject();
+    }
+};
+
+pub const Datetime = struct {
+    name: []const u8,
+    type_: FieldType,
+
+    pub fn jsonStringify(self: Datetime, jw: anytype) !void {
+        try jw.beginObject();
+        try jw.objectField("name");
+        try jw.write(self.name);
+        try jw.objectField("type");
+        try jw.write(self.type_);
+        try jw.endObject();
+    }
+};
+
 test "IngestionJob jsonStringify" {
     const allocator = std.testing.allocator;
 
@@ -96,29 +183,64 @@ test "IngestionJob jsonStringify" {
     try testing.expectEqualStrings(expected, result);
 }
 
-const FieldType = enum([]u8) { int = "int", string = "string", float = "float", long = "long", unixtimestamp = "unixtimestamp" };
+test "Table jsonStringify test" {
+    const allocator = std.testing.allocator;
 
-pub const TableSpec = struct {
-    id: u64,
-    name: []const u8,
-    schema: struct {
-        dimensions: []Dimension,
-        metrics: []Metric,
-        datetime: Datetime,
-    },
-};
+    const table = Table{
+        .id = 123,
+        .name = "my_table",
+        .schema = .{
+            .dimensions = &[_]Dimension{
+                .{ .name = "city", .type_ = .string },
+                .{ .name = "year", .type_ = .int },
+            },
+            .metrics = &[_]Metric{
+                .{ .name = "sales", .type_ = .float },
+                .{ .name = "count", .type_ = .long },
+            },
+            .datetime = .{ .name = "timestamp", .type_ = .unixtimestamp },
+        },
+    };
 
-pub const Dimension = struct {
-    name: []const u8,
-    type_: FieldType,
-};
+    const result = try json.stringifyAlloc(allocator, table, .{});
+    defer allocator.free(result);
 
-pub const Metric = struct {
-    name: []const u8,
-    type_: FieldType,
-};
+    const expected =
+        \\{"id":123,"name":"my_table","schema":{"dimensions":[{"name":"city","type":"string"},{"name":"year","type":"int"}],"metrics":[{"name":"sales","type":"float"},{"name":"count","type":"long"}],"datetime":{"name":"timestamp","type":"unixtimestamp"}}}
+    ;
 
-pub const Datetime = struct {
-    name: []const u8,
-    type_: FieldType,
-};
+    try testing.expectEqualStrings(expected, result);
+}
+
+test "Dimension jsonStringify test" {
+    const allocator = std.testing.allocator;
+    const dimension = Dimension{ .name = "city", .type_ = .string };
+
+    const result = try json.stringifyAlloc(allocator, dimension, .{});
+    defer allocator.free(result);
+
+    const expected = "{\"name\":\"city\",\"type\":\"string\"}";
+    try testing.expectEqualStrings(expected, result);
+}
+
+test "Metric jsonStringify test" {
+    const allocator = std.testing.allocator;
+    const metric = Metric{ .name = "sales", .type_ = .float };
+
+    const result = try json.stringifyAlloc(allocator, metric, .{});
+    defer allocator.free(result);
+
+    const expected = "{\"name\":\"sales\",\"type\":\"float\"}";
+    try testing.expectEqualStrings(expected, result);
+}
+
+test "Datetime jsonStringify test" {
+    const allocator = std.testing.allocator;
+    const datetime = Datetime{ .name = "timestamp", .type_ = .unixtimestamp };
+
+    const result = try json.stringifyAlloc(allocator, datetime, .{});
+    defer allocator.free(result);
+
+    const expected = "{\"name\":\"timestamp\",\"type\":\"unixtimestamp\"}";
+    try testing.expectEqualStrings(expected, result);
+}

@@ -3,6 +3,11 @@ const cli = @import("cli.zig");
 const configuration = @import("configuration.zig");
 
 pub fn main() !void {
+    if (comptime @import("builtin").os.tag == .windows) {
+        std.debug.print("Norman does not run on Windows. Sorry\n", .{});
+        return error.PlatformNotSupported;
+    }
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 

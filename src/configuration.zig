@@ -19,7 +19,7 @@ pub fn load(allocator: std.mem.Allocator, path: []const u8) !Config {
     defer allocator.free(data);
 
     const result = try std.json.parseFromSlice(Config, allocator, data, .{});
-    defer result.deinit();
+    // defer result.deinit();
 
     return result.value;
 }

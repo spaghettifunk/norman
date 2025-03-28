@@ -51,7 +51,15 @@ pub const Commander = struct {
 
         // blocks
         server_instance = &server;
-        try server.listen();
+        server.listen() catch |err| {
+            switch (err) {
+                else => {
+                    std.debug.print("{any}\n", .{err});
+                },
+            }
+            // store DB
+            try self.md.store();
+        };
     }
 };
 

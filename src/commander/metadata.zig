@@ -6,51 +6,110 @@ const mem = std.mem;
 const models = @import("../models/models.zig");
 
 pub const MetadataDB = struct {
-    tables: []models.TableSpec,
+    tables: []models.Table,
     ingestionJobs: []models.IngestionJob,
+
+    pub fn jsonStringify(self: MetadataDB, jw: anytype) !void {
+        // root object
+        try jw.beginObject();
+
+        try jw.objectField("tables");
+        try jw.beginObject();
+        for (self.tables) |table| {
+            try table.jsonStringify(jw);
+        }
+        try jw.endObject();
+
+        try jw.objectField("ingestionJobs");
+        try jw.beginObject();
+        for (self.ingestionJobs) |ij| {
+            try ij.jsonStringify(jw);
+        }
+        try jw.endObject();
+
+        try jw.endObject();
+    }
 };
 
 pub const MetadataService = struct {
-    filePath: []const u8,
+    filePath: []const u8 = "metadata.db",
     allocator: std.mem.Allocator,
+    db: MetadataDB,
 
     pub fn init(allocator: std.mem.Allocator) !MetadataService {
-        const filePath = "metadata.db";
+        var md = MetadataService{
+            .allocator = allocator,
+            .db = undefined,
+        };
 
         // Check if the file exists
-        fs.cwd().access(filePath, .{}) catch |err| {
-            if (err == std.posix.AccessError.FileNotFound) {
-                // File does not exist, create it with empty JSON array
-                var file = try fs.cwd().createFile(filePath, .{});
-                defer file.close();
-                try file.writer().writeAll("[]"); // Initialize with an empty JSON array
+        fs.cwd().access(md.filePath, .{}) catch |err| {
+            switch (err) {
+                std.posix.AccessError.FileNotFound => {
+                    // File does not exist, create it with empty JSON array
+                    var file = try fs.cwd().createFile(md.filePath, .{});
+                    defer file.close();
+                    try file.writer().writeAll("{\"tables\":[], \"ingestionJobs\":[]}");
+                },
+                else => {
+                    // something went wrong
+                    std.debug.print("{any}\n", .{err});
+                    std.process.exit(1);
+                },
             }
         };
 
-        return MetadataService{
-            .filePath = filePath,
-            .allocator = allocator,
-        };
+        // load db in memory
+        try md.readDBFile();
+
+        return md;
     }
 
-    fn readJson(self: MetadataService) !json.Array {
-        var file = try fs.cwd().openFile(self.filePath, .{});
-        defer file.close();
-
-        var buffer: [1024]u8 = undefined;
-        const bytesRead = try file.reader().readAll(&buffer);
-        const fileContent = buffer[0..bytesRead];
-
-        var parser = json.Parser.init(fileContent);
-        const root = try parser.parse();
-        return try root.array();
+    pub fn store(self: MetadataService) !void {
+        try self.saveDBFile();
     }
 
-    fn writeJson(self: MetadataService, data: json.Array) !void {
-        var file = try fs.cwd().createFile(self.filePath, .{ .truncate = true });
-        defer file.close();
-        const writer = file.writer();
-        var stringifier = json.Stringifier.init(writer);
-        try stringifier.stringify(data.any());
+    fn readDBFile(self: *MetadataService) !void {
+        // TODO: validate if 512 is a sufficient value
+        const data = try std.fs.cwd().readFileAlloc(self.allocator, self.filePath, 512);
+        defer self.allocator.free(data);
+
+        const result = try std.json.parseFromSlice(MetadataDB, self.allocator, data, .{});
+        const db = result.value;
+        self.db = db;
+    }
+
+    fn saveDBFile(self: MetadataService) !void {
+        // 1. Read the original file.
+        const originalFile = try std.fs.openFileAbsolute(self.filePath, .{ .mode = .read_write });
+        defer originalFile.close();
+
+        const originalSize = try originalFile.getEndPos();
+        const originalBuffer = try std.heap.page_allocator.alloc(u8, originalSize);
+        defer std.heap.page_allocator.free(originalBuffer);
+
+        const bytes_read = try originalFile.read(originalBuffer);
+        if (bytes_read != originalSize) {
+            return error.UnexpectedEndOfFile;
+        }
+
+        // 2. Create a temporary copy.
+        const tempPath = "metadata.temp.db";
+        const temp_file = try std.fs.createFileAbsolute(tempPath, .{});
+        defer temp_file.close();
+
+        _ = try temp_file.write(originalBuffer);
+
+        // 3. Overwrite the original file with new data.
+        try originalFile.seekTo(0); // Reset the file pointer to the beginning.
+        try originalFile.writeAll(""); // Clear the contents of the file.
+
+        const result = try json.stringifyAlloc(self.allocator, self.db, .{});
+        defer self.allocator.free(result);
+
+        _ = try originalFile.write(result);
+
+        // 4. Delete the temporary copy.
+        try std.fs.deleteFileAbsolute(tempPath);
     }
 };

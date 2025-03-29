@@ -2,12 +2,11 @@ package commander
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"time"
 
-	"github.com/goccy/go-json"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 
 	configuration "github.com/spaghettifunk/norman/internal/common"
@@ -26,8 +25,10 @@ var (
 )
 
 type Commander struct {
-	config configuration.Configuration
-	app    *fiber.App
+	config  configuration.Configuration
+	server  *http.Server
+	stopCtx context.Context
+	stopFn  context.CancelFunc
 
 	// grpc stuff
 	storageGRPCConn   *grpc.ClientConn
@@ -35,57 +36,12 @@ type Commander struct {
 }
 
 func New(config configuration.Configuration) (*Commander, error) {
-	// Create new Fiber application
-	app := fiber.New(fiber.Config{
-		AppName:           "commander-api-server",
-		EnablePrintRoutes: true, // TODO: change this based on logger level -- DEBUG
-		JSONEncoder:       json.Marshal,
-		JSONDecoder:       json.Unmarshal,
-	})
-	// add default middleware
-	app.Use(recover.New())
-
-	c := &Commander{
-		config: config,
-		app:    app,
-	}
-
-	c.setupRoutes()
-
-	return c, nil
-}
-
-func (c *Commander) setupRoutes() {
-	apiV1 := c.app.Group("/commander/v1")
-
-	apiV1.Get("/", c.APIVersion)
-
-	// tenant routes
-	tenantEndpoints := apiV1.Group("/tenants")
-	tenantEndpoints.Get("/", c.GetTenants)
-	tenantEndpoints.Post("/", c.CreateTenant)
-	tenantEndpoints.Get("/:tenantId", c.GetTenant)
-	tenantEndpoints.Put("/:tenantId", c.UpdateTenant)
-	tenantEndpoints.Patch("/:tenantId", c.PatchTenant)
-	tenantEndpoints.Delete("/:tenantId", c.DeleteTenant)
-
-	// table endpoints
-	tableEndpoints := tenantEndpoints.Group("/:tenantId/tables")
-	tableEndpoints.Get("/", c.GetTables)
-	tableEndpoints.Post("/", c.CreateTable)
-	tableEndpoints.Get("/:tableName", c.GetTable)
-	tableEndpoints.Put("/:tableName", c.UpdateTable)
-	tableEndpoints.Patch("/:tableName", c.PatchTable)
-	tableEndpoints.Delete("/:tableName", c.DeleteTable)
-
-	// ingestion job endpoints
-	jobEndpoints := tenantEndpoints.Group("/:tenantId/jobs")
-	jobEndpoints.Get("/", c.GetJobs)
-	jobEndpoints.Post("/", c.CreateJob)
-	jobEndpoints.Get("/:jobID", c.GetJob)
-	jobEndpoints.Put("/:jobID", c.UpdateJob)
-	jobEndpoints.Patch("/:jobID", c.PatchJob)
-	jobEndpoints.Delete("/:jobID", c.DeleteJob)
+	stopCtx, stopFn := context.WithCancel(context.Background())
+	return &Commander{
+		config:  config,
+		stopCtx: stopCtx,
+		stopFn:  stopFn,
+	}, nil
 }
 
 func (c *Commander) StartServer(address string) error {
@@ -93,8 +49,54 @@ func (c *Commander) StartServer(address string) error {
 		return err
 	}
 	// initialize api
-	log.Info().Msg("Commander server is ready to handle requests")
-	return c.app.Listen(address)
+	log.Info().Msg("Commander server is ready to handle grRPC requests")
+
+	r := mux.NewRouter()
+	r.HandleFunc("/commander/v1", c.apiVersion)
+
+	// tenant routes
+	r.HandleFunc("/commander/v1/tenants", c.apiVersion)
+
+	// tenantEndpoints := apiV1.Group("/tenants")
+	// tenantEndpoints.Get("/", c.GetTenants)
+	// tenantEndpoints.Post("/", c.CreateTenant)
+	// tenantEndpoints.Get("/:tenantId", c.GetTenant)
+	// tenantEndpoints.Put("/:tenantId", c.UpdateTenant)
+	// tenantEndpoints.Patch("/:tenantId", c.PatchTenant)
+	// tenantEndpoints.Delete("/:tenantId", c.DeleteTenant)
+
+	// // table endpoints
+	// tableEndpoints := tenantEndpoints.Group("/:tenantId/tables")
+	// tableEndpoints.Get("/", c.GetTables)
+	// tableEndpoints.Post("/", c.CreateTable)
+	// tableEndpoints.Get("/:tableName", c.GetTable)
+	// tableEndpoints.Put("/:tableName", c.UpdateTable)
+	// tableEndpoints.Patch("/:tableName", c.PatchTable)
+	// tableEndpoints.Delete("/:tableName", c.DeleteTable)
+
+	// // ingestion job endpoints
+	// jobEndpoints := tenantEndpoints.Group("/:tenantId/jobs")
+	// jobEndpoints.Get("/", c.GetJobs)
+	// jobEndpoints.Post("/", c.CreateJob)
+	// jobEndpoints.Get("/:jobID", c.GetJob)
+	// jobEndpoints.Put("/:jobID", c.UpdateJob)
+	// jobEndpoints.Patch("/:jobID", c.PatchJob)
+	// jobEndpoints.Delete("/:jobID", c.DeleteJob)
+
+	c.server = &http.Server{
+		Addr:    address,
+		Handler: r,
+	}
+
+	go func() {
+		if err := c.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Info().Msgf("Server error: %v\n", err)
+		}
+	}()
+
+	log.Info().Msgf("Broker server listening on %s\n", address)
+
+	return nil
 }
 
 func (c *Commander) initializeGRPCClient() error {
@@ -112,7 +114,7 @@ func (c *Commander) initializeGRPCClient() error {
 
 	// initialize gRPC client of Storage Service
 	log.Info().Msg("initialize gRPC client of Storage Service")
-	c.storageGRPCConn, err = grpc.Dial(rpcAddr,
+	c.storageGRPCConn, err = grpc.NewClient(rpcAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithUnaryInterceptor(unaryInterceptor),
 	)
@@ -136,9 +138,16 @@ func (c *Commander) ShutdownServer() error {
 	// closing gRPC storage service client
 	log.Info().Msg("close gRCP client connection of Storage Service")
 	if err := c.storageGRPCConn.Close(); err != nil {
-		return err
+		return fmt.Errorf("Storage gRPC client shutdown failed: %w", err)
 	}
 
-	log.Info().Msg("shutting down server...")
-	return c.app.Shutdown()
+	c.stopFn()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) // Graceful shutdown timeout
+	defer cancel()
+
+	if err := c.server.Shutdown(ctx); err != nil {
+		return fmt.Errorf("Broker server shutdown failed: %w", err)
+	}
+	log.Info().Msg("Broker server stopped")
+	return nil
 }

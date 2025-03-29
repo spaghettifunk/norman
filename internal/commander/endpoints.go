@@ -1,14 +1,9 @@
 package commander
 
 import (
-	"context"
+	"encoding/json"
 	"net/http"
 	"time"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/spaghettifunk/norman/internal/common/entities"
-	cingestion "github.com/spaghettifunk/norman/internal/common/ingestion"
-	storage_v1 "github.com/spaghettifunk/norman/proto/v1/storage"
 )
 
 const (
@@ -16,8 +11,9 @@ const (
 	apiVersion = "v0.0.1"
 )
 
-func (c *Commander) APIVersion(ctx *fiber.Ctx) error {
-	return ctx.Status(http.StatusOK).JSON(fiber.Map{
+func (c *Commander) apiVersion(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
 		"API Name":    apiName,
 		"API Version": apiVersion,
 		"timestamp":   time.Now().Format("2006-01-02 15:04:05"),
@@ -25,8 +21,7 @@ func (c *Commander) APIVersion(ctx *fiber.Ctx) error {
 }
 
 /*
-Tenant routes
-*/
+
 func (c *Commander) GetTenants(ctx *fiber.Ctx) error {
 	return nil
 }
@@ -51,9 +46,6 @@ func (c *Commander) DeleteTenant(ctx *fiber.Ctx) error {
 	return nil
 }
 
-/*
-Ingestion Job routes
-*/
 type CreateIngestionJobRequest struct {
 	Job cingestion.IngestionJobConfiguration `json:"job"`
 }
@@ -116,9 +108,6 @@ func (c *Commander) DeleteJob(ctx *fiber.Ctx) error {
 	return nil
 }
 
-/*
-Table routes
-*/
 type CreateTableRequest struct {
 	Table entities.Table `json:"table"`
 }
@@ -160,3 +149,4 @@ func (c *Commander) PatchTable(ctx *fiber.Ctx) error {
 func (c *Commander) DeleteTable(ctx *fiber.Ctx) error {
 	return nil
 }
+*/

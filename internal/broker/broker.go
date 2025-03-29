@@ -2,16 +2,17 @@ package broker
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"time"
 
-	"github.com/goccy/go-json"
+	"github.com/gorilla/mux"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/rs/zerolog/log"
 	configuration "github.com/spaghettifunk/norman/internal/common"
 	"github.com/spaghettifunk/norman/internal/common/utils"
@@ -25,8 +26,10 @@ var (
 )
 
 type Broker struct {
-	config configuration.Configuration
-	app    *fiber.App
+	config  configuration.Configuration
+	server  *http.Server
+	stopCtx context.Context
+	stopFn  context.CancelFunc
 
 	// grpc stuff
 	storageGRPCConn   *grpc.ClientConn
@@ -34,32 +37,12 @@ type Broker struct {
 }
 
 func New(config configuration.Configuration) (*Broker, error) {
-	// Create new Fiber application
-	app := fiber.New(fiber.Config{
-		AppName:           "broker-api-server",
-		EnablePrintRoutes: true, // TODO: change this based on logger level -- DEBUG
-		JSONEncoder:       json.Marshal,
-		JSONDecoder:       json.Unmarshal,
-	})
-	// add default middleware
-	app.Use(recover.New())
-
-	br := &Broker{
-		config: config,
-		app:    app,
-	}
-
-	br.setupRoutes()
-
-	return br, nil
-}
-
-func (b *Broker) setupRoutes() {
-	apiV1 := b.app.Group("/broker/v1")
-
-	// query routes
-	queryEndpoints := apiV1.Group("/query")
-	queryEndpoints.Post("/", b.CreateQuery)
+	stopCtx, stopFn := context.WithCancel(context.Background())
+	return &Broker{
+		config:  config,
+		stopCtx: stopCtx,
+		stopFn:  stopFn,
+	}, nil
 }
 
 func (b *Broker) initializeGRPCClient() error {
@@ -78,7 +61,7 @@ func (b *Broker) initializeGRPCClient() error {
 
 	// initialize gRPC client of Storage Service
 	log.Info().Msg("initialize gRPC client of Storage Service")
-	b.storageGRPCConn, err = grpc.Dial(rpcAddr,
+	b.storageGRPCConn, err = grpc.NewClient(rpcAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithUnaryInterceptor(unaryInterceptor),
 	)
@@ -102,16 +85,42 @@ func (b *Broker) StartServer(address string) error {
 	if err := b.initializeGRPCClient(); err != nil {
 		return err
 	}
-	log.Info().Msg("Storage Server is ready to handle requests")
-	return b.app.Listen(address)
+	log.Info().Msg("Broker Server is ready to handle gRPC requests")
+
+	r := mux.NewRouter()
+	r.HandleFunc("/broker/v1", b.apiVersion)
+	r.HandleFunc("/broker/v1/query", b.runQuery)
+
+	b.server = &http.Server{
+		Addr:    address,
+		Handler: r,
+	}
+
+	go func() {
+		if err := b.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Info().Msgf("Server error: %v\n", err)
+		}
+	}()
+
+	log.Info().Msgf("Broker server listening on %s\n", address)
+	return nil
+
 }
 
 func (b *Broker) ShutdownServer() error {
 	// closing gRPC storage service client
-	log.Info().Msg("close gRCP client connection of Storage Service")
+	log.Info().Msg("close gRCP client connection of Broker Service")
 	if err := b.storageGRPCConn.Close(); err != nil {
-		return err
+		return fmt.Errorf("Storage gRPC client shutdown failed: %w", err)
 	}
-	log.Info().Msg("shutting down server...")
-	return b.app.Shutdown()
+
+	b.stopFn()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) // Graceful shutdown timeout
+	defer cancel()
+
+	if err := b.server.Shutdown(ctx); err != nil {
+		return fmt.Errorf("Broker server shutdown failed: %w", err)
+	}
+	log.Info().Msg("Broker server stopped")
+	return nil
 }

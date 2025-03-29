@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog/log"
-	"github.com/spaghettifunk/norman/internal/common/utils"
 	"github.com/spaghettifunk/norman/internal/storage/indexer"
 
 	bitmapindex "github.com/spaghettifunk/norman/internal/storage/indexer/bitmap"
@@ -121,14 +120,9 @@ func (m *IndexManager) PersistToDisk(segmentID, partitionStart, partitionEnd str
 		return err
 	}
 
-	buffer, err := utils.CompressBrotli(buf)
-	if err != nil {
-		return err
-	}
-
 	// TODO: handle when file already exists. Potential solution is to create a tmp file
 	// delete the current index file and then change the name of the tmp file
-	if _, err = m.file.Write(buffer); err != nil {
+	if _, err = m.file.Write(buf); err != nil {
 		return err
 	}
 	return nil
@@ -145,16 +139,11 @@ func ReadIndexFile(dir string) (*IndexManager, error) {
 		return nil, err
 	}
 
-	buffer, err := utils.DecompressBrotli(buf)
-	if err != nil {
-		return nil, err
-	}
-
 	im := &IndexManager{
 		directory: dir,
 		mu:        sync.Mutex{},
 	}
-	if err = json.Unmarshal(buffer, im); err != nil {
+	if err = json.Unmarshal(buf, im); err != nil {
 		log.Error().Msg(err.Error())
 		return nil, err
 	}

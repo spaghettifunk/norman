@@ -2,21 +2,16 @@ package commander
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/goccy/go-json"
-	"github.com/google/uuid"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/swagger"
 	"github.com/rs/zerolog/log"
 
 	configuration "github.com/spaghettifunk/norman/internal/common"
 	"github.com/spaghettifunk/norman/internal/common/utils"
-	"github.com/spaghettifunk/norman/pkg/consul"
 	storageproto "github.com/spaghettifunk/norman/proto/v1/storage"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
@@ -31,12 +26,8 @@ var (
 )
 
 type Commander struct {
-	Name     string
-	ID       uuid.UUID
-	Hostname string
-	consul   *consul.Consul
-	config   configuration.Configuration
-	app      *fiber.App
+	config configuration.Configuration
+	app    *fiber.App
 
 	// grpc stuff
 	storageGRPCConn   *grpc.ClientConn
@@ -54,30 +45,9 @@ func New(config configuration.Configuration) (*Commander, error) {
 	// add default middleware
 	app.Use(recover.New())
 
-	// initialize consul client
-	cs := consul.New()
-	if err := cs.Init(); err != nil {
-		return nil, err
-	}
-
-	id, err := uuid.NewUUID()
-	if err != nil {
-		return nil, err
-	}
-
-	// get the hostname from the machine
-	hn, err := os.Hostname()
-	if err != nil {
-		return nil, err
-	}
-
 	c := &Commander{
-		Name:     "commander",
-		ID:       id,
-		Hostname: hn,
-		consul:   cs,
-		config:   config,
-		app:      app,
+		config: config,
+		app:    app,
 	}
 
 	c.setupRoutes()
@@ -89,7 +59,6 @@ func (c *Commander) setupRoutes() {
 	apiV1 := c.app.Group("/commander/v1")
 
 	apiV1.Get("/", c.APIVersion)
-	apiV1.Get("/swagger/*", swagger.HandlerDefault)
 
 	// tenant routes
 	tenantEndpoints := apiV1.Group("/tenants")
@@ -120,20 +89,9 @@ func (c *Commander) setupRoutes() {
 }
 
 func (c *Commander) StartServer(address string) error {
-	var err error
-	// register to consul
-	log.Info().Msg("register and declare Commander to Consul")
-	if err = c.consul.Start(c); err != nil {
+	if err := c.initializeGRPCClient(); err != nil {
 		return err
 	}
-	if err = c.consul.Declare(c); err != nil {
-		return err
-	}
-
-	if err = c.initializeGRPCClient(); err != nil {
-		return err
-	}
-
 	// initialize api
 	log.Info().Msg("Commander server is ready to handle requests")
 	return c.app.Listen(address)
@@ -141,7 +99,6 @@ func (c *Commander) StartServer(address string) error {
 
 func (c *Commander) initializeGRPCClient() error {
 	var err error
-
 	unaryInterceptor := retry.UnaryClientInterceptor(
 		retry.WithCodes(retriableErrors...),
 		retry.WithMax(3),
@@ -176,12 +133,6 @@ func (c *Commander) initializeGRPCClient() error {
 }
 
 func (c *Commander) ShutdownServer() error {
-	// deregister to consul
-	log.Info().Msg("deregister Commander to Consul")
-	if err := c.consul.Stop(c); err != nil {
-		return err
-	}
-
 	// closing gRPC storage service client
 	log.Info().Msg("close gRCP client connection of Storage Service")
 	if err := c.storageGRPCConn.Close(); err != nil {
@@ -190,24 +141,4 @@ func (c *Commander) ShutdownServer() error {
 
 	log.Info().Msg("shutting down server...")
 	return c.app.Shutdown()
-}
-
-func (c *Commander) GetHost() string {
-	return c.Hostname
-}
-
-func (c *Commander) GetPort() string {
-	return fmt.Sprint(c.config.Commander.Port)
-}
-
-func (c *Commander) GetName() string {
-	return c.Name
-}
-
-func (c *Commander) GetID() string {
-	return c.ID.String()
-}
-
-func (c *Commander) GetMetadata() map[string]string {
-	return nil
 }

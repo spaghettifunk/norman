@@ -7,16 +7,10 @@ import (
 )
 
 type Configuration struct {
-	Consul    *consul    `toml:"consul"`
 	Commander *commander `toml:"commander"`
 	Broker    *broker    `toml:"broker"`
 	Storage   *storage   `toml:"storage"`
 	Logger    *logger    `toml:"logger"`
-}
-
-type consul struct {
-	Address string `toml:"address"`
-	Port    int    `toml:"port"`
 }
 
 type commander struct {
@@ -45,16 +39,11 @@ type deepStorage struct {
 }
 
 type logger struct {
-	Level  string `toml:"level"`
-	Pretty bool   `toml:"pretty"`
+	Level string `toml:"level"`
 }
 
 func Fetch() *Configuration {
 	return &Configuration{
-		Consul: &consul{
-			Address: getStringOrDefault("consul.address", "127.0.0.1"),
-			Port:    getIntOrDefault("consul.port", 8500),
-		},
 		Commander: &commander{
 			Address: getStringOrDefault("commander.address", "127.0.0.1"),
 			Port:    getIntOrDefault("commander.port", 8080),
@@ -70,8 +59,7 @@ func Fetch() *Configuration {
 			RPCPort:  getIntOrDefault("rpc_port", 8400),
 		},
 		Logger: &logger{
-			Level:  getStringOrDefault("logger.level", "info"),
-			Pretty: getBoolOrDefault("logger.pretty", false),
+			Level: getStringOrDefault("logger.level", "info"),
 		},
 	}
 }

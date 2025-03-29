@@ -13,19 +13,17 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/spaghettifunk/norman/internal/common/manager"
-	"github.com/spaghettifunk/norman/pkg/consul"
 	storageproto "github.com/spaghettifunk/norman/proto/v1/storage"
 )
 
 type grpcServer struct {
 	storageID           string
-	consul              *consul.Consul
 	ingestionJobManager *manager.IngestionJobManager
 }
 
-func newgrpcServer(id string, cs *consul.Consul) (*grpcServer, error) {
+func newgrpcServer(id string) (*grpcServer, error) {
 	// Create the new job m
-	m, err := manager.NewIngestionJobManager(cs)
+	m, err := manager.NewIngestionJobManager()
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +34,6 @@ func newgrpcServer(id string, cs *consul.Consul) (*grpcServer, error) {
 
 	srv := &grpcServer{
 		storageID:           id,
-		consul:              cs,
 		ingestionJobManager: m,
 	}
 	return srv, nil
@@ -62,7 +59,7 @@ func InterceptorLogger(l zerolog.Logger) grpc_logging.Logger {
 	})
 }
 
-func NewGRPCServer(id string, cs *consul.Consul, grpcOpts ...grpc.ServerOption) (*grpc.Server, error) {
+func NewGRPCServer(id string, grpcOpts ...grpc.ServerOption) (*grpc.Server, error) {
 	logger := zerolog.New(os.Stderr)
 
 	opts := []grpc_logging.Option{
@@ -81,7 +78,7 @@ func NewGRPCServer(id string, cs *consul.Consul, grpcOpts ...grpc.ServerOption) 
 	)
 
 	gsrv := grpc.NewServer(grpcOpts...)
-	srv, err := newgrpcServer(id, cs)
+	srv, err := newgrpcServer(id)
 	if err != nil {
 		return nil, err
 	}
@@ -94,14 +91,14 @@ func (s *grpcServer) Ping(ctx context.Context, req *storageproto.PingRequest) (*
 }
 
 func (s *grpcServer) CreateIngestionJob(ctx context.Context, req *storageproto.CreateIngestionJobRequest) (*storageproto.CreateIngestionJobResponse, error) {
-	cfg, err := s.consul.GetIngestionJobConfiguration(req.JobID)
-	if err != nil {
-		return nil, err
-	}
+	// cfg, err := s.consul.GetIngestionJobConfiguration(req.JobID)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	if err := s.ingestionJobManager.Execute(cfg); err != nil {
-		return nil, err
-	}
+	// if err := s.ingestionJobManager.Execute(cfg); err != nil {
+	// 	return nil, err
+	// }
 
 	return &storageproto.CreateIngestionJobResponse{StorageID: s.storageID, Message: "Ingestion Job created successfully"}, nil
 }

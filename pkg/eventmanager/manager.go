@@ -16,7 +16,7 @@ var lock = &sync.Mutex{}
 // Event represents the data associated with an event.
 type Event struct {
 	Type EventType
-	Data interface{}
+	Data any
 }
 
 // Observer defines the interface for event observers.
@@ -70,7 +70,6 @@ func (em *eventManager) Notify(event Event) {
 	if !ok {
 		return
 	}
-
 	for _, observer := range observers {
 		observer.OnNotify(event)
 	}

@@ -1,0 +1,37 @@
+{
+  "name": "transcript",
+  "schema": {
+    "dimensions": [
+      {
+        "name": "studentID",
+        "type": "int"
+      },
+      {
+        "name": "firstName",
+        "type": "string"
+      },
+      {
+        "name": "lastName",
+        "type": "string"
+      },
+      {
+        "name": "gender",
+        "type": "string"
+      },
+      {
+        "name": "subject",
+        "type": "string"
+      }
+    ],
+    "metrics": [
+      {
+        "name": "score",
+        "type": "float"
+      }
+    ],
+    "datetime": {
+      "name": "timestamp",
+      "type": "unixtimestamp"
+    }
+  }
+}

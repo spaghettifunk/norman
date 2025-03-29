@@ -28,8 +28,5 @@ func InitLogger(service string, lc configuration.Configuration) {
 	zerolog.SetGlobalLevel(l)
 
 	log.Logger = log.With().Str("service", service).Logger()
-
-	if lc.Logger.Pretty {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	}
+	log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }

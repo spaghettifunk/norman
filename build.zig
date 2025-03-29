@@ -44,6 +44,9 @@ pub fn build(b: *std.Build) void {
     });
     exe.root_module.addImport("httpz", httpz.module("httpz"));
 
+    // const uuid = b.dependency("uuid", .{});
+    // exe.root_module.addImport("uuid", uuid.module("uuid"));
+
     // This *creates* a Run step in the build graph, to be executed when another
     // step is evaluated that depends on it. The next line below will establish
     // such a dependency.

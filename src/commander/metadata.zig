@@ -1,13 +1,15 @@
 const std = @import("std");
+const uuid = @import("uuid");
 const json = std.json;
 const fs = std.fs;
 const mem = std.mem;
+const assert = std.debug.assert;
 
 const models = @import("../models/models.zig");
 
 pub const MetadataDB = struct {
-    tables: []models.Table,
-    ingestionJobs: []models.IngestionJob,
+    tables: std.ArrayList(models.Table),
+    ingestionJobs: std.ArrayList(models.IngestionJob),
 
     pub fn jsonStringify(self: MetadataDB, jw: anytype) !void {
         // root object
@@ -15,16 +17,20 @@ pub const MetadataDB = struct {
 
         try jw.objectField("tables");
         try jw.beginObject();
-        for (self.tables) |table| {
+
+        for (self.tables.items) |table| {
             try table.jsonStringify(jw);
         }
+
         try jw.endObject();
 
         try jw.objectField("ingestionJobs");
         try jw.beginObject();
-        for (self.ingestionJobs) |ij| {
+
+        for (self.ingestionJobs.items) |ij| {
             try ij.jsonStringify(jw);
         }
+
         try jw.endObject();
 
         try jw.endObject();
@@ -66,20 +72,6 @@ pub const MetadataService = struct {
     }
 
     pub fn store(self: MetadataService) !void {
-        try self.saveDBFile();
-    }
-
-    fn readDBFile(self: *MetadataService) !void {
-        // TODO: validate if 512 is a sufficient value
-        const data = try std.fs.cwd().readFileAlloc(self.allocator, self.filePath, 512);
-        defer self.allocator.free(data);
-
-        const result = try std.json.parseFromSlice(MetadataDB, self.allocator, data, .{});
-        const db = result.value;
-        self.db = db;
-    }
-
-    fn saveDBFile(self: MetadataService) !void {
         // 1. Read the original file.
         const originalFile = try std.fs.openFileAbsolute(self.filePath, .{ .mode = .read_write });
         defer originalFile.close();
@@ -111,5 +103,49 @@ pub const MetadataService = struct {
 
         // 4. Delete the temporary copy.
         try std.fs.deleteFileAbsolute(tempPath);
+    }
+
+    pub fn addTable(self: MetadataService, table: models.Table) !void {
+        const id = uuid.v7.new();
+        table.id = id;
+        try self.db.tables.append(table);
+    }
+
+    pub fn addInjestionJob(self: MetadataService, ij: models.IngestionJob) !void {
+        const id = uuid.v7.new();
+        ij.id = id;
+        try self.db.ingestionJobs.append(ij);
+    }
+
+    pub fn deleteTable(self: MetadataService, table: models.Table) void {
+        var i: u8 = 0;
+        while (i < self.db.tables.items.len) : (i += 1) {
+            if (self.db.tables.items[i].id == table.id) {
+                break;
+            }
+        }
+        const t = self.db.tables.swapRemove(i);
+        assert(t.id == table.id);
+    }
+
+    pub fn deleteInjestionJob(self: MetadataService, ij: models.IngestionJob) void {
+        var i: u8 = 0;
+        while (i < self.db.ingestionJobs.items.len) : (i += 1) {
+            if (self.db.ingestionJobs.items[i].id == ij.id) {
+                break;
+            }
+        }
+        const t = self.db.ingestionJobs.swapRemove(i);
+        assert(t.id == ij.id);
+    }
+
+    fn readDBFile(self: *MetadataService) !void {
+        // TODO: validate if 512 is a sufficient value
+        const data = try std.fs.cwd().readFileAlloc(self.allocator, self.filePath, 512);
+        defer self.allocator.free(data);
+
+        const result = try std.json.parseFromSlice(MetadataDB, self.allocator, data, .{});
+        const db = result.value;
+        self.db = db;
     }
 };

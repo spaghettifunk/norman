@@ -5,7 +5,7 @@ const json = std.json;
 const StorageType = enum { disk, blobstorage, kafka, pulsar };
 
 pub const IngestionJob = struct {
-    id: u64,
+    id: u128,
     name: []const u8,
     type_: StorageType,
     ingestionConfiguration: struct {
@@ -63,20 +63,14 @@ pub const IngestionJob = struct {
     }
 };
 
-const FieldType = enum {
-    int,
-    string,
-    float,
-    long,
-    unixtimestamp,
-};
+const FieldType = enum { int, string, float, long, unixtimestamp };
 
 pub const Table = struct {
-    id: u64,
+    id: u128,
     name: []const u8,
     schema: struct {
-        dimensions: []const Dimension,
-        metrics: []const Metric,
+        dimensions: std.ArrayList(Dimension),
+        metrics: std.ArrayList(Metric),
         datetime: Datetime,
     },
 
@@ -91,13 +85,16 @@ pub const Table = struct {
         try jw.beginObject();
         try jw.objectField("dimensions");
         try jw.beginArray();
-        for (self.schema.dimensions) |dimension| {
+
+        for (self.schema.dimensions.items) |dimension| {
             try dimension.jsonStringify(jw);
         }
+
         try jw.endArray();
         try jw.objectField("metrics");
         try jw.beginArray();
-        for (self.schema.metrics) |metric| {
+
+        for (self.schema.metrics.items) |metric| {
             try metric.jsonStringify(jw);
         }
         try jw.endArray();
@@ -183,7 +180,7 @@ test "IngestionJob jsonStringify" {
     try testing.expectEqualStrings(expected, result);
 }
 
-test "Table jsonStringify test" {
+test "Table jsonStringify" {
     const allocator = std.testing.allocator;
 
     const table = Table{
@@ -212,7 +209,7 @@ test "Table jsonStringify test" {
     try testing.expectEqualStrings(expected, result);
 }
 
-test "Dimension jsonStringify test" {
+test "Dimension jsonStringify" {
     const allocator = std.testing.allocator;
     const dimension = Dimension{ .name = "city", .type_ = .string };
 
@@ -223,7 +220,7 @@ test "Dimension jsonStringify test" {
     try testing.expectEqualStrings(expected, result);
 }
 
-test "Metric jsonStringify test" {
+test "Metric jsonStringify" {
     const allocator = std.testing.allocator;
     const metric = Metric{ .name = "sales", .type_ = .float };
 
@@ -234,7 +231,7 @@ test "Metric jsonStringify test" {
     try testing.expectEqualStrings(expected, result);
 }
 
-test "Datetime jsonStringify test" {
+test "Datetime jsonStringify" {
     const allocator = std.testing.allocator;
     const datetime = Datetime{ .name = "timestamp", .type_ = .unixtimestamp };
 

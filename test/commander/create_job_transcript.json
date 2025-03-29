@@ -1,20 +1,15 @@
 {
-  "job": {
-    "name": "transcript_job",
-    "type": "KAFKA",
-    "ingestionConfiguration": {
-      "realtime": {
-        "kafka": {
-          "brokers": "localhost:9092",
-          "topic": "test-events",
-          "offset": "oldest"
-        }
-      }
-    },
-    "segmentConfiguration": {
-      "schemaName": "transcript",
-      "timeColumnName": "",
-      "timeType": ""
+  "name": "transcript",
+  "type": "realtime",
+  "ingestionConfiguration": {
+    "kafka": {
+      "brokers": "localhost:9092",
+      "topic": "test-events",
+      "offset": "oldest"
     }
+  },
+  "segmentConfiguration": {
+    "table": "transcript",
+    "timeColumnName": "timestamp"
   }
 }

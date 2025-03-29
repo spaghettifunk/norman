@@ -1,0 +1,17 @@
+{
+  "commander": {
+    "host": "127.0.0.1",
+    "port": 8080
+  },
+  "storage": {
+    "host": "127.0.0.1",
+    "port": 8081
+  },
+  "broker": {
+    "host": "127.0.0.1",
+    "port": 8082
+  },
+  "log": {
+    "level": "info"
+  }
+}
